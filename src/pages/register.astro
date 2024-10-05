@@ -1,0 +1,219 @@
+---
+import Button from '../components/Button.astro';
+import LoginLayout from '../layouts/LoginLayout.astro';
+import Layout from '../layouts/Layout.astro';
+import ButtonOldCopy from '../components/ButtonOldCopy.astro';
+
+interface Props {
+	title: string;
+}
+const { title } = Astro.props;
+---
+
+<LoginLayout title="loginLayout">
+	<body>
+		<header>
+			<h1>Bienvenido a <span class="text-kine">KINE</span><span class="text-play">PLAY</span></h1>
+		</header>
+		
+		<div class="login-container">
+			
+			<h2>Iniciar sesión</h2>
+			<form id="registerForm" onsubmit="handleRegister(event)">
+				<div class="input-group">
+                    <div class="input-group">
+                        <label for="nombre">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" required />
+                    </div>
+                    <div class="input-group">
+                        <label for="apellido">Apellido</label>
+                        <input type="text" id="apellido" name="apellido" required />
+                    </div>
+                    <div class="input-group">
+                        <label for="dni">DNI</label>
+                        <input type="number" id="dni" name="dni" required />
+                    </div>
+                    <div class="input-group">
+					<label for="email">Email</label>
+					<input type="text" id="email" name="email" required />
+				</div>
+				<div class="input-group">
+					<label for="password">Contraseña</label>
+					<input type="password" id="password" name="password" required />
+				</div>
+				<div class="button-container">
+                    <Button
+						title="Registrarse"
+						body=""
+						imageSrc=""
+						color="#FFBD59"
+					/>
+					<ButtonOldCopy
+						href="login"
+						title="Volver"
+						body=""
+						imageSrc=""
+						color="#03A1CF"
+					/>
+					
+				</div>
+			</form>
+		</div>
+
+		<script client:load>
+			// Función para manejar el registro
+			async function handleRegister(event) {
+				event.preventDefault(); // Evitar que se recargue la página
+
+				// Obtener los valores del formulario con los IDs correctos
+				const nombre = document.getElementById('nombre').value;
+				const apellido = document.getElementById('apellido').value;
+				const dni = document.getElementById('dni').value;
+				const email = document.getElementById('email').value;
+				const password = document.getElementById('password').value;
+
+				// Crear objeto con los datos del usuario
+				const userData = {
+					nombre: nombre,
+					apellido: apellido,
+					dni: dni,
+					email: email,
+					password: password
+				};
+
+				try {
+					// Enviar la solicitud POST al backend
+					const response = await fetch('http://localhost/usuarios/usuarios.php?register=true', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(userData)
+					});
+
+					// Manejar la respuesta
+					if (response.ok) {
+						// Usuario creado con éxito
+					//	document.getElementById('registerMessage').style.display = 'none';
+						alert('Usuario registrado exitosamente.');
+						window.location.href = '/login'; // Redirigir a la página de login
+					} else {
+						// Error en el registro
+						const errorData = await response.json();
+						//document.getElementById('registerMessage').style.display = 'block';
+						
+						//document.getElementById('registerMessage').textContent = errorData.error || 'Error al registrar usuario.';
+					}
+				} catch (error) {
+					// Manejar errores de red u otros problemas
+					//document.getElementById('registerMessage').style.display = 'block';
+					//document.getElementById('registerMessage').textContent = 'Hubo un problema con la solicitud. Intente de nuevo.';
+					console.error('Error en la solicitud:', error);
+				}
+			}
+		</script>
+
+	</body>
+	
+	
+</LoginLayout>
+
+
+
+
+
+
+<style is:global>
+
+	
+	:root {
+		--accent: 136, 58, 234;
+		--accent-light: 224, 204, 250;
+		--accent-dark: 49, 10, 101;
+		--accent-gradient: linear-gradient(
+			45deg,
+			rgb(var(--accent)),
+			rgb(var(--accent-light)) 30%,
+			white 60%
+		);
+	}
+	html {
+		font-family: system-ui, sans-serif;
+		background: #fafafa;
+		color: #121212;
+		margin: 0;
+		padding: 0;
+	}
+	header {
+    background-color: #ffffff;
+    width: 100%;
+    display: flex; /* Activar flexbox */
+    align-items: center; /* Centra verticalmente */
+    justify-content: center; /* Centra horizontalmente */
+    padding-top: 25px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 100px;
+}
+	h1 {
+		font-size: 4rem;
+		font-weight: 700;
+		line-height: 1;
+		text-align: center;
+		padding-bottom: 20px;
+	}
+	.login-container {
+		width: 25%;
+		margin: 10px auto;
+		background-color: white;
+		padding: 20px;
+		border-radius: 10px;
+		box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+		text-align: center;
+	}
+	h2 {
+		margin-bottom: 20px;
+		color: rgb(var(--accent-dark));
+		font-size: 2rem;
+		font-weight: 700;
+		line-height: 1;
+		text-align: center;		
+		color: black;
+	}
+	.input-group {
+		margin-bottom: 15px;
+		text-align: left;
+		align-items: center;
+		justify-content: center;
+	}
+	.input-group label {
+		display: block;
+		margin-bottom: 5px;
+		color: black;
+		font-weight: 600;
+	}
+	.input-group input {
+		width: 90%;
+		padding: 10px;
+		border: 1px solid #ccc;
+		border-radius: 5px;
+		font-size: 1rem;
+	}
+	.text-kine {
+		color: #FFBD59;
+	}
+	.text-play {
+		color: #03A1CF;
+	}
+
+	.button-container {
+    display: flex;
+    flex-direction: column; /* Alinea los botones uno encima del otro */
+    align-items: center; /* Centra los botones horizontalmente */
+    gap: 10px; /* Espacio entre los botones */
+}
+
+button {
+    width: 80%; /* O ajusta según lo necesario para que tengan un buen tamaño */
+    padding: 10px 20px;
+}
+</style>

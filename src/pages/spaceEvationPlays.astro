@@ -1,0 +1,267 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Chart from 'chart.js/auto';
+---
+
+<Layout title="spaceEvationPlays">
+    <div class="container">
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Gráfico de Juegos</title>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <style>
+                /* Estilos aquí */
+            </style>
+        </head>
+        <body>
+            <h1>Información Jugadas</h1>
+            <h4 id="account-info"></h4>
+
+
+            <!-- Caja de información -->
+            <div id="infoBox" class="info-box">
+                <p><strong>Cantidad de Jugadas:</strong> <span id="cantidadJuegos"></span></p>
+                <p><strong>Amplitud Media Promedio:</strong> <span id="amplitudPromedioTotal"></span>°</p>
+                <p><strong>Amplitud Máxima Promedio:</strong> <span id="amplitudMaximaPromedio"></span>°</p>
+            </div>
+            <!-- Gráfico de amplitud media de las jugadas -->
+            <canvas id="amplitudMediaChart" width="100%" height="20"></canvas>
+            <canvas id="amplitudMaximaChart" width="100%" height="20"></canvas>
+
+            <div id="graficosContainer"></div>
+
+            <!--Script que maneja los datos del paciente -->
+
+
+
+            
+            <!--Script que maneja los datos del usuario/médico -->
+            <script client:load>
+                document.addEventListener('DOMContentLoaded', () => {
+                        const idUsuario = sessionStorage.getItem('id');
+                        const nombreUsuario = sessionStorage.getItem('nombre');
+                        const apellidoUsuario = sessionStorage.getItem('apellido');
+                        const mailUsuario = sessionStorage.getItem('email');
+                        const dniUsuario = sessionStorage.getItem('dni');
+
+                       
+                        const nombrePaciente = localStorage.getItem('nombre_paciente');
+                        const apellidoPaciente = localStorage.getItem('apellido_paciente');
+                        
+
+                        const accountInfoDiv = document.getElementById('account-info');
+
+                        if (idUsuario) {
+                            accountInfoDiv.innerHTML = `
+                                <div>
+                                    <h2>Médico: ${nombreUsuario} ${apellidoUsuario}</h2>
+                                    <h2>Paciente: ${nombrePaciente} ${apellidoPaciente}</h2>
+                                </div>
+                            `;
+                        } else {
+                            accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
+                        }
+                    });
+            </script>
+
+            <script >
+                 const dniPaciente = localStorage.getItem('dni_paciente');
+                // Hacer la solicitud AJAX para obtener todos los datos de los juegos // `http://localhost:80/usuarios/pacientes.php?id_usuario=${idUsuario}`
+                fetch(`http://localhost/usuarios/juegos.php?dni=${dniPaciente}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            console.error('Error:', data.error);
+                            return;
+                        }
+
+                        let sumaAmplitudMedia = 0;
+                        let sumaAmplitudMaxima = 0;
+                        let sumaTiempoJugado = 0;
+                        const amplitudMedias = [];
+                        const amplitudMaximas = [];
+                        const jugadaNumeros = [];
+
+                        data.forEach((juego: any, index: number) => {
+                            amplitudMedias.push(juego.amplitud_media);
+                            amplitudMaximas.push(juego.amplitud_maxima);
+                            jugadaNumeros.push(`Jugada ${juego.id_juego}`);
+
+                            const container = document.createElement('div');
+                            container.className = 'juego-container';
+                            container.innerHTML = `
+                                <div>
+                                    <h2>Jugada ${juego.id_juego}</h2>
+                                    <p><strong>Fecha:</strong> ${juego.fecha}</p>
+                                    <p><strong>Tiempo Jugado:</strong> ${juego.tiempo_jugado} Segundos</p>
+                                    <p><strong>Puntaje:</strong> ${juego.puntaje}</p>
+                                    <p><strong>Amplitud Máxima:</strong> ${juego.amplitud_maxima}°</p>
+                                    <p><strong>Amplitud Media:</strong> ${juego.amplitud_media}°</p>
+                                </div>
+                                <canvas id="juegoChart${index}" width="100%" height="30"></canvas>
+                                
+                            `;
+                            document.getElementById('graficosContainer')?.appendChild(container);
+
+                            sumaAmplitudMedia += juego.amplitud_media;
+                            sumaAmplitudMaxima += juego.amplitud_maxima;
+                            sumaTiempoJugado += juego.tiempo_jugado;
+
+                            const tiempos = juego.datos.map((d: any) => d.tiempo);
+                            const angulos = juego.datos.map((d: any) => d.angulo);
+
+                            const canvas = document.getElementById(`juegoChart${index}`) as HTMLCanvasElement;
+                            const ctx = canvas?.getContext('2d');
+                            if (ctx) {
+                                new Chart(ctx, {
+                                    type: 'line',
+                                    data: {
+                                        labels: tiempos,
+                                        datasets: [{
+                                            label: 'Ángulo',
+                                            data: angulos,
+                                            borderColor: 'rgba(60, 150, 255, 0.8)',
+                                            borderWidth: 2,
+                                            fill: false
+                                        }]
+                                    },
+                                    options: {
+                                        scales: {
+                                            x: {
+                                                title: {
+                                                    display: true,
+                                                    text: 'Tiempo (Mili Segundos)',
+                                                    color: '#2c3e50'
+                                                }
+                                            },
+                                            y: {
+                                                title: {
+                                                    display: true,
+                                                    text: 'Ángulo (grados)',
+                                                    color: '#2c3e50'
+                                                }
+                                            }
+                                        },
+                                        plugins: {
+                                            legend: {
+                                                labels: {
+                                                    color: '#2c3e50'
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                        });
+
+                        const amplitudPromedio = sumaAmplitudMedia / data.length;
+                        const amplitudMaxima = sumaAmplitudMaxima / data.length;
+
+                        document.getElementById('cantidadJuegos')!.textContent = data.length.toString();
+                        document.getElementById('amplitudPromedioTotal')!.textContent = amplitudPromedio.toFixed(2);
+
+                        // Crear gráfico de amplitud media de las jugadas
+                        const amplitudMediaCanvas = document.getElementById('amplitudMediaChart') as HTMLCanvasElement;
+                        const amplitudMediaCtx = amplitudMediaCanvas?.getContext('2d');
+                        if (amplitudMediaCtx) {
+                            new Chart(amplitudMediaCtx, {
+                                type: 'line', // Puedes cambiar a 'bar' si prefieres un gráfico de barras
+                                data: {
+                                    labels: jugadaNumeros,
+                                    datasets: [{
+                                        label: 'Amplitud Media',
+                                        data: amplitudMedias,
+                                        backgroundColor: 'rgba(230, 160, 60, 1)',
+                                        borderColor: 'rgba(255, 189, 89, 1)',
+                                        borderWidth: 2,
+                                        fill: false
+                                    }]
+                                },
+                                options: {
+                                    scales: {
+                                        x: {
+                                            title: {
+                                                display: true,
+                                                text: 'Número de Jugada',
+                                                color: '#2c3e50'
+                                            }
+                                        },
+                                        y: {
+                                            title: {
+                                                display: true,
+                                                text: 'Amplitud Media (grados)',
+                                                color: '#2c3e50'
+                                            }
+                                        }
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            labels: {
+                                                color: '#2c3e50'
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        document.getElementById('amplitudMaximaPromedio')!.textContent = amplitudMaxima.toFixed(2);
+                        // Crear gráfico de amplitud media de las jugadas
+                        const amplitudMaximaCanvas = document.getElementById('amplitudMaximaChart') as HTMLCanvasElement;
+                        const amplitudMaximaCtx = amplitudMaximaCanvas?.getContext('2d');
+                        if (amplitudMediaCtx) {
+                            new Chart(amplitudMaximaCtx, {
+                                type: 'line', // Puedes cambiar a 'bar' si prefieres un gráfico de barras
+                                data: {
+                                    labels: jugadaNumeros,
+                                    datasets: [{
+                                        label: 'Amplitud Máxima',
+                                        data: amplitudMaximas,
+                                        backgroundColor: 'rgba(200, 60, 50, 1)',
+                                        borderColor: 'rgba(230, 80, 70, 1)',
+                                        borderWidth: 2,
+                                        fill: false
+                                    }]
+                                },
+                                options: {
+                                    scales: {
+                                        x: {
+                                            title: {
+                                                display: true,
+                                                text: 'Número de Jugada',
+                                                color: '#2c3e50'
+                                            }
+                                        },
+                                        y: {
+                                            title: {
+                                                display: true,
+                                                text: 'Amplitud Máxima (grados)',
+                                                color: '#2c3e50'
+                                            }
+                                        }
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            labels: {
+                                                color: '#2c3e50'
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            </script>
+        </body>
+    </html>
+    </div>
+</Layout>
+
+<style is:global>
+	.container {
+        margin: 5px;
+    }
+</style>

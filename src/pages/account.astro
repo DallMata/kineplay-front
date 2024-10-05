@@ -1,0 +1,44 @@
+---
+import Layout from "../layouts/Layout.astro";
+import ButtonOldCopy from "../components/ButtonOldCopy.astro";
+---
+
+<Layout title="Cuenta">
+    <div id="account-info">
+        <p>Cargando datos del usuario...</p>
+    </div>
+
+    <ButtonOldCopy
+        href="login"
+        title="Salir"
+        body=""
+        imageSrc=""
+        color="#e65046"
+    />
+
+    <script client:load>
+        // Este script se ejecutará en el cliente (navegador)
+        document.addEventListener('DOMContentLoaded', () => {
+            const idUsuario = sessionStorage.getItem('id');
+            const nombreUsuario = sessionStorage.getItem('nombre');
+            const apellidoUsuario = sessionStorage.getItem('apellido');
+            const mailUsuario = sessionStorage.getItem('email');
+            const dniUsuario = sessionStorage.getItem('dni');
+
+            const accountInfoDiv = document.getElementById('account-info');
+
+            if (idUsuario) {
+                accountInfoDiv.innerHTML = `
+                    <div>
+                        <h2>Bienvenido, ${nombreUsuario} ${apellidoUsuario}!</h2>
+                        <p>ID de usuario: ${idUsuario}</p>
+                        <p>Email: ${mailUsuario}</p>
+                        <p>DNI: ${dniUsuario}</p>
+                    </div>
+                `;
+            } else {
+                accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
+            }
+        });
+    </script>
+</Layout>

@@ -1,0 +1,188 @@
+---
+import Button from "../components/Button.astro";
+import ButtonOldCopy from "../components/ButtonOldCopy.astro";
+import Layout from "../layouts/Layout.astro";
+import PacientCreation from "./pacientCreation.astro";
+
+---
+
+<Layout title="Pacientes">
+    <div id="account-info" class="info-container">
+        <p>Cargando datos del usuario...</p>
+    </div>
+    <h2 class="button-container">PACIENTES</h2>
+    <div id="pacientesList" class="button-container paciente-list"></div>
+    <div class="button-container">
+        <ButtonOldCopy
+            href="pacients"
+            title="Crear"
+            body=""
+            imageSrc=""
+            color="#03A1CF"
+        />
+    </div>
+
+    <script client:load>
+        //información de usuario/médico
+        document.addEventListener('DOMContentLoaded', () => {
+            const idUsuario = sessionStorage.getItem('id');
+            const nombreUsuario = sessionStorage.getItem('nombre');
+            const apellidoUsuario = sessionStorage.getItem('apellido');
+            const mailUsuario = sessionStorage.getItem('email');
+            const dniUsuario = sessionStorage.getItem('dni');
+
+            const accountInfoDiv = document.getElementById('account-info');
+
+            if (idUsuario) {
+                accountInfoDiv.innerHTML = `
+                    <div>
+                        <h2>Pacientes de ${nombreUsuario} ${apellidoUsuario}!</h2>
+                    </div>
+                `;
+            } else {
+                accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
+            }
+        });
+
+        //Guardo dni de paciente en localstorage
+        document.addEventListener('DOMContentLoaded', async () => {
+            const idUsuario = sessionStorage.getItem('id');
+            console.log('ID DE USUARIO', idUsuario);
+            if (idUsuario) {
+                try {
+                    const response = await fetch(`http://localhost:80/usuarios/pacientes.php?id_usuario=${idUsuario}`);
+                    const pacientes = await response.json();
+
+                    console.log('Pacientes recuperados:', pacientes);
+
+                    if (Array.isArray(pacientes) && pacientes.length > 0) {
+                        const pacientesList = document.getElementById('pacientesList');
+                        pacientes.forEach(paciente => {
+                            const pacienteDiv = document.createElement('div');
+                            pacienteDiv.classList.add('paciente-item');
+                            pacienteDiv.innerHTML = `
+                                <strong>${paciente.nombre} ${paciente.apellido}</strong> <br> (DNI: ${paciente.dni})
+                            `;
+
+                            // Agregar evento click para guardar el DNI en localStorage
+                            pacienteDiv.addEventListener('click', () => {
+                                localStorage.setItem('dni_paciente', paciente.dni);
+                                localStorage.setItem('nombre_paciente', paciente.nombre);
+                                localStorage.setItem('apellido_paciente', paciente.apellido);
+
+                                window.location.href = "/spaceEvationPlays";
+                            });
+
+                            pacientesList.appendChild(pacienteDiv);
+                        });
+                    } else {
+                        document.getElementById('pacientesList').textContent = 'No hay pacientes registrados.';
+                    }
+                } catch (error) {
+                    console.error('Error al recuperar los pacientes:', error);
+                    document.getElementById('pacientesList').textContent = 'Error al cargar los pacientes.';
+                }
+            } else {
+                document.getElementById('pacientesList').textContent = 'No has iniciado sesión.';
+            }
+        });
+    </script>
+</Layout>
+
+<style is:global>
+    :root {
+        --primary-color: #03A1CF;
+        --secondary-color: #FFBD59;
+        --background-light: #f8f9fa;
+        --text-dark: #121212;
+        --accent-gradient: linear-gradient(45deg, #03A1CF, #FFBD59 70%);
+    }
+
+    html {
+        font-family: 'Helvetica Neue', sans-serif;
+        background: var(--background-light);
+        color: var(--text-dark);
+        margin: 0;
+        padding: 0;
+    }
+
+    h1 {
+        font-size: 4rem;
+        font-weight: 700;
+        line-height: 1.1;
+        text-align: center;
+        padding-bottom: 20px;
+    }
+
+    h2 {
+        color: var(--primary-color);
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .info-container {
+        padding: 20px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .button-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .button-container button {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 10px 20px;
+        font-size: 1.2rem;
+        border: none;
+        border-radius: 5px;
+        transition: background-color 0.3s ease;
+        cursor: pointer;
+        width: 50%;
+        text-align: center;
+    }
+
+    .button-container button:hover {
+        background-color: var(--secondary-color);
+    }
+
+    .paciente-list {
+        width: 80%;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .paciente-item {
+        background-color: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .paciente-item:hover {
+        transform: translateY(-5px);
+        background: var(--accent-gradient);
+        color: white;
+    }
+
+    .paciente-item strong {
+        display: block;
+        font-size: 1.1rem;
+    }
+
+    .paciente-item small {
+        color: gray;
+    }
+</style>
