@@ -4,17 +4,51 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
 ---
 
 <Layout title="Cuenta">
+    <style>
+        #account-info {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f8ff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 40px auto;
+            text-align: center;
+            color: #333;
+        }
+
+        h2 {
+            color: #03A1CF;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 1.1rem;
+            margin: 10px 0;
+            color: #666;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+    </style>
+
     <div id="account-info">
         <p>Cargando datos del usuario...</p>
     </div>
 
-    <ButtonOldCopy
-        href="login"
-        title="Salir"
-        body=""
-        imageSrc=""
-        color="#e65046"
-    />
+    <div class="button-container">
+        <ButtonOldCopy
+            href="login"
+            title="Salir"
+            body=""
+            imageSrc=""
+            color="#e65046"
+        />
+    </div>
 
     <script client:load>
         // Este script se ejecutará en el cliente (navegador)
