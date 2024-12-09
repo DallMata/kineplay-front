@@ -1,0 +1,232 @@
+---
+import Button from "../components/Button.astro";
+import LoginLayout from "../layouts/LoginLayout.astro";
+import Layout from "../layouts/Layout.astro";
+import ButtonOldCopy from "../components/ButtonOldCopy.astro";
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+
+<LoginLayout title="loginLayout">
+  <body>
+    <header>
+      <h1>
+        Bienvenido a <span class="text-kine">KINE</span><span class="text-play"
+          >PLAY</span
+        >
+      </h1>
+    </header>
+    <p class="subtitle">
+      La plataforma que revoluciona la rehabilitación física a través de juegos
+      interactivos.
+    </p>
+
+    <!-- Landing Page Sections -->
+    <div class="landing-container">
+      <div class="info-section">
+        <h2>¿Qué es KinePlay?</h2>
+        <p>
+          KinePlay utiliza tecnología avanzada de visión por computadora para
+          ayudar a los pacientes a mejorar su rehabilitación mientras se
+          divierten jugando. Seguimos el progreso y generamos reportes para
+          médicos y kinesiólogos.
+        </p>
+      </div>
+
+      <div class="benefits-section">
+        <h2>Beneficios de usar KinePlay</h2>
+        <ul>
+          <li>Mejora en el seguimiento de terapias</li>
+          <li>Informes automáticos para profesionales</li>
+          <li>Juegos personalizados para cada paciente</li>
+        </ul>
+      </div>
+
+      <div class="button-container">
+        <ButtonOldCopy
+          href="login"
+          title="Ingresar"
+          body=""
+          imageSrc=""
+          color="#03a1cf"
+        />
+        <ButtonOldCopy
+          href="register"
+          title="Registrarse"
+          body=""
+          imageSrc=""
+          color="#FFBD59"
+        />
+      </div>
+    </div>
+  </body>
+
+  <footer>
+    <p>© 2024 KinePlay. Todos los derechos reservados.</p>
+  </footer>
+
+  <script client:load></script>
+</LoginLayout>
+
+<style is:global>
+  :root {
+    --accent: 136, 58, 234;
+    --accent-light: 224, 204, 250;
+    --accent-dark: 49, 10, 101;
+    --accent-gradient: linear-gradient(
+      45deg,
+      rgb(var(--accent)),
+      rgb(var(--accent-light)) 30%,
+      white 60%
+    );
+  }
+  html {
+    font-family: system-ui, sans-serif;
+    background: #fafafa;
+    color: #121212;
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background-color: #ffffff;
+    width: 100%;
+    display: flex; /* Activar flexbox */
+    flex-direction: column;
+    align-items: center; /* Centra verticalmente */
+    justify-content: center; /* Centra horizontalmente */
+    padding-top: 25px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 100px;
+  }
+  h1 {
+    font-size: 4rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    padding-bottom: 20px;
+  }
+  .login-container {
+    width: 25%;
+    margin: 10px auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  h2 {
+    margin-bottom: 20px;
+    color: rgb(var(--accent-dark));
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    color: black;
+  }
+  .subtitle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    color: grey;
+    margin-top: 10px;
+  }
+
+  .landing-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    padding: 40px 20px;
+  }
+
+  .info-section,
+  .benefits-section {
+    text-align: center;
+    width: 80%;
+    max-width: 600px;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .info-section h2,
+  .benefits-section h2 {
+    font-size: 2rem;
+    color: var(--accent-dark);
+    margin-bottom: 15px;
+  }
+
+  .info-section p,
+  .benefits-section ul {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #333;
+  }
+
+  .benefits-section ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .benefits-section li {
+    margin: 10px 0;
+    position: relative;
+    padding-left: 20px;
+  }
+
+  .benefits-section li::before {
+    content: "✔";
+    color: var(--accent);
+    position: absolute;
+    left: 0;
+    font-size: 1.2rem;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 50px;
+    color: #888;
+  }
+  .input-group {
+    margin-bottom: 15px;
+    text-align: left;
+    align-items: center;
+    justify-content: center;
+  }
+  .input-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: black;
+    font-weight: 600;
+  }
+  .input-group input {
+    width: 90%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+  .text-kine {
+    color: #ffbd59;
+  }
+  .text-play {
+    color: #03a1cf;
+  }
+
+  .button-container {
+    display: flex;
+    flex-direction: column; /* Alinea los botones uno encima del otro */
+    align-items: center; /* Centra los botones horizontalmente */
+    gap: 10px; /* Espacio entre los botones */
+  }
+
+  button {
+    width: 80%; /* O ajusta según lo necesario para que tengan un buen tamaño */
+    padding: 10px 20px;
+  }
+</style>

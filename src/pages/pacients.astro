@@ -1,200 +1,413 @@
 ---
-import Button from "../components/Button.astro";
-import ButtonOldCopy from "../components/ButtonOldCopy.astro";
 import Layout from "../layouts/Layout.astro";
-import PacientCreation from "./pacientCreation.astro";
-
+import ButtonOldCopy from "../components/ButtonOldCopy.astro";
 ---
 
-<Layout title="Pacientes">
-    <div id="account-info" class="info-container">
-        <p>Cargando datos del usuario...</p>
-    </div>
-    <h2 class="button-container">PACIENTES</h2>
-    <div id="pacientesList" class="button-container paciente-list"></div>
-    <div class="button-container">
-        <ButtonOldCopy
-            href="pacients"
-            title="Crear"
-            body=""
-            imageSrc=""
-            color="#03A1CF"
-        />
-        <ButtonOldCopy
-            href="pacients"
-            title="Eliminar"
-            body=""
-            imageSrc=""
-            color="#e65046"
-        />
-    </div>
+<Layout title="pacientsLayout">
+  <div id="search-container">
+    <input placeholder="Buscar Pacientes..." id="search-input" />
+    <ButtonOldCopy
+      href="pacientCreation"
+      title="+"
+      body=""
+      imageSrc=""
+      color="#03A1CF"
+      width="30px"
+      height="30px"
+    />
+  </div>
+  <div id="patients-container"></div>
 
-    <script client:load>
-        //información de usuario/médico
-        document.addEventListener('DOMContentLoaded', () => {
-            const idUsuario = sessionStorage.getItem('id');
-            const nombreUsuario = sessionStorage.getItem('nombre');
-            const apellidoUsuario = sessionStorage.getItem('apellido');
-            const mailUsuario = sessionStorage.getItem('email');
-            const dniUsuario = sessionStorage.getItem('dni');
+  <script>
+    // Coordenadas de los landmarks de una mano (modelo base)
+    const handCoordinates = [
+      [250, 460], // 0 - base de la palma
+      [300, 400],
+      [330, 370],
+      [350, 330],
+      [360, 300], // pulgar (1-4)
+      [270, 350],
+      [260, 300],
+      [255, 250],
+      [250, 200], // índice (5-8)
+      [230, 350],
+      [225, 290],
+      [220, 230],
+      [215, 170], // medio (9-12)
+      [200, 360],
+      [190, 300],
+      [180, 250],
+      [175, 200], // anular (13-16)
+      [170, 390],
+      [160, 340],
+      [150, 290],
+      [140, 250], // meñique (17-20)
+    ];
 
-            const accountInfoDiv = document.getElementById('account-info');
+    // Conexiones entre los puntos para formar los dedos y la palma
+    const connections = [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 4], // pulgar
+      [0, 5],
+      [5, 6],
+      [6, 7],
+      [7, 8], // índice
+      [0, 9],
+      [9, 10],
+      [10, 11],
+      [11, 12], // medio
+      [0, 13],
+      [13, 14],
+      [14, 15],
+      [15, 16], // anular
+      [0, 17],
+      [17, 18],
+      [18, 19],
+      [19, 20], // meñique
+      [1, 5],
+      [5, 9],
+      [9, 13],
+      [13, 17], // Palma
+    ];
 
-            if (idUsuario) {
-                accountInfoDiv.innerHTML = `
-                    <div>
-                        <h2>Pacientes de ${nombreUsuario} ${apellidoUsuario}!</h2>
-                    </div>
-                `;
-            } else {
-                accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
+    // Función para centrar las coordenadas de la mano
+    // Función para centrar las coordenadas de la mano y mover ligeramente hacia abajo y a la izquierda
+    function centerHandCoordinates(coordinates) {
+      const centerX = coordinates[10][0];
+      const centerY = coordinates[8][1];
+
+      const offsetX = -20; // Desplazamiento hacia la izquierda
+      const offsetY = -80; // Desplazamiento hacia abajo
+
+      return coordinates.map(([x, y]) => [
+        x - centerX + offsetX,
+        y - centerY + offsetY,
+      ]);
+    }
+
+    // Función para crear el gráfico de mano de un paciente
+    // Función para crear el gráfico de mano de un paciente
+    function createHandSvg(patient) {
+      const container = document.createElement("div");
+      container.style.margin = "20px";
+
+      const containerHeader = document.createElement("div");
+
+      // Título con el nombre del paciente
+      const title = document.createElement("h3");
+      title.textContent = `${patient.nombre} ${patient.apellido} (DNI ${patient.dni})`;
+      container.appendChild(containerHeader);
+      containerHeader.appendChild(title);
+      title.style.color = "#444444";
+
+      // Agregar la imagen debajo del gráfico de la mano
+      const edit = document.createElement("img");
+      edit.src = "./dist/edit.png"; // Ruta relativa de la imagen en tu proyecto
+      edit.alt = "Imagen del paciente";
+      edit.style.display = "block"; // Asegura que la imagen esté en su propia línea
+      edit.style.marginTop = "10px"; // Espaciado arriba de la imagen
+      edit.style.maxWidth = "40px"; // Ajusta el tamaño de la imagen
+      edit.style.maxHeight = "40px"; // Ajusta el tamaño de la imagen
+      edit.id = "trash";
+      edit.style.cursor = "pointer";
+      edit.addEventListener("mouseover", () => {
+        edit.style.transform = "scale(1.1)";
+      });
+      edit.addEventListener("mouseleave", () => {
+        edit.style.transform = "scale(1)";
+      });
+      edit.addEventListener("click", async () => {
+        const userResponse = confirm(
+          `¿Desea editar la informacion del paciente ${patient.nombre} ${patient.apellido} con DNI ${patient.dni}?`
+        );
+        if (userResponse) {
+          try {
+            const response = await fetch(
+              `http://localhost:80/usuarios/asignaciones.php?id_paciente=${patient.id_paciente}`
+            );
+
+            if (!response.ok) {
+              throw new Error(`Error HTTP: ${response.status}`);
             }
+
+            // Convertir la respuesta a JSON
+            const data = await response.json();
+
+            // Mostrar los datos en la consola
+            console.log("Respuesta del servidor:", data);
+
+            // Guardar todo el array en localStorage
+            if (data.length > 0) {
+              localStorage.setItem(
+                "asignaciones_paciente",
+                JSON.stringify(data)
+              );
+              console.log("Datos guardados en localStorage:", data);
+            } else {
+              console.warn("La respuesta del servidor está vacía.");
+            }
+
+            // Guardar datos adicionales del paciente
+            localStorage.setItem("id_paciente", patient.id_paciente);
+            localStorage.setItem("dni_paciente", patient.dni);
+            localStorage.setItem("nombre_paciente", patient.nombre);
+            localStorage.setItem("apellido_paciente", patient.apellido);
+            //localStorage.setItem("clave_paciente", patient.clave);
+
+            // Redirigir a otra página si es necesario
+            window.location.href = `/pacientModify`;
+          } catch (error) {
+            console.error("Error al realizar la solicitud:", error);
+          }
+        }
+      });
+      containerHeader.appendChild(edit);
+
+      // Agregar la imagen debajo del gráfico de la mano
+      const img = document.createElement("img");
+      img.src = "./dist/trash.png"; // Ruta relativa de la imagen en tu proyecto
+      img.alt = "Imagen del paciente";
+      img.style.display = "block"; // Asegura que la imagen esté en su propia línea
+      img.style.marginTop = "10px"; // Espaciado arriba de la imagen
+      img.style.maxWidth = "40px"; // Ajusta el tamaño de la imagen
+      img.style.maxHeight = "40px"; // Ajusta el tamaño de la imagen
+      img.id = "trash";
+      img.style.cursor = "pointer";
+      img.addEventListener("mouseover", () => {
+        img.style.transform = "scale(1.1)";
+      });
+      img.addEventListener("mouseleave", () => {
+        img.style.transform = "scale(1)";
+      });
+      img.addEventListener("click", async () => {
+        const userResponse = confirm(
+          `¿Desea eliminar al paciente ${patient.nombre} ${patient.apellido} con DNI ${patient.dni}?`
+        );
+        if (userResponse) {
+          await fetch(
+            `http://localhost:80/usuarios/pacientes.php?dni=${patient.dni}`,
+            { method: "DELETE" }
+          ).then(() => {
+            window.location.reload();
+          });
+        }
+      });
+      containerHeader.appendChild(img);
+
+      containerHeader.style.display = "flex";
+      containerHeader.style.justifyContent = "space-between";
+
+      // Crear el elemento SVG
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "-150 -150 350 350"); // Redimensionar y centrar
+      svg.setAttribute("width", "350");
+      svg.setAttribute("height", "350");
+      svg.style.border = "3px dashed #FFBD59";
+      svg.style.borderRadius = "16px";
+
+      const centeredCoordinates = centerHandCoordinates(handCoordinates);
+
+      // Dibujar las conexiones entre los puntos
+      connections.forEach(([start, end]) => {
+        const [x1, y1] = centeredCoordinates[start];
+        const [x2, y2] = centeredCoordinates[end];
+        const line = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "line"
+        );
+        line.setAttribute("x1", x1);
+        line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2);
+        line.setAttribute("y2", y2);
+        line.setAttribute("stroke", "#03A1CF");
+        line.setAttribute("stroke-width", "2");
+        svg.appendChild(line);
+      });
+
+      // Dibujar los puntos
+      centeredCoordinates.forEach(([x, y], index) => {
+        const circle = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle"
+        );
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", y);
+        circle.setAttribute("r", "6");
+        circle.setAttribute("fill", "red");
+
+        // Evento click para interactuar con el punto
+        circle.addEventListener("click", async () => {
+          const userResponse = confirm(
+            `¿Desea ver las jugadas de ${patient.nombre} ${patient.apellido}\n Para la articulación número ${index}?`
+          );
+
+          if (userResponse) {
+            // Acción si el usuario presiona "Aceptar"
+            console.log(
+              `Cargando jugadas de ${patient.nombre} ${patient.apellido} para la articulación ${index}`
+            );
+            // Aquí puedes redirigir o realizar una acción, por ejemplo:
+
+            localStorage.setItem("dni_paciente", patient.dni);
+            const tipo = index + 22;
+            localStorage.setItem("id_tipo", tipo);
+
+            // Acción si el usuario presiona "Aceptar"
+            console.log(
+              `TIPO: ${localStorage.getItem("id_tipo")}; DNI: ${localStorage.getItem("dni_paciente")}`
+            );
+
+            await loadTypes(tipo);
+
+            window.location.href = `/plataformJumpPlays`;
+          } else {
+            // Acción si el usuario presiona "Cancelar"
+            console.log(
+              `El usuario canceló la acción para ${patient.nombre} ${patient.apellido}`
+            );
+          }
         });
 
-        //Guardo dni de paciente en localstorage
-        document.addEventListener('DOMContentLoaded', async () => {
-            const idUsuario = sessionStorage.getItem('id');
-            console.log('ID DE USUARIO', idUsuario);
-            if (idUsuario) {
-                try {
-                    const response = await fetch(`http://localhost:80/usuarios/pacientes.php?id_usuario=${idUsuario}`);
-                    const pacientes = await response.json();
+        async function loadTypes(tipo: number) {
+          try {
+            // Realizar la solicitud fetch
+            const response = await fetch(
+              `http://localhost:80/usuarios/tipoDatoJuegos.php?id_tipo=${tipo}`
+            );
 
-                    console.log('Pacientes recuperados:', pacientes);
-
-                    if (Array.isArray(pacientes) && pacientes.length > 0) {
-                        const pacientesList = document.getElementById('pacientesList');
-                        pacientes.forEach(paciente => {
-                            const pacienteDiv = document.createElement('div');
-                            pacienteDiv.classList.add('paciente-item');
-                            pacienteDiv.innerHTML = `
-                                <strong>${paciente.nombre} ${paciente.apellido}</strong> <br> (DNI: ${paciente.dni})
-                            `;
-
-                            // Agregar evento click para guardar el DNI en localStorage
-                            pacienteDiv.addEventListener('click', () => {
-                                localStorage.setItem('dni_paciente', paciente.dni);
-                                localStorage.setItem('nombre_paciente', paciente.nombre);
-                                localStorage.setItem('apellido_paciente', paciente.apellido);
-
-                                window.location.href = "/spaceEvationPlays";
-                            });
-
-                            pacientesList.appendChild(pacienteDiv);
-                        });
-                    } else {
-                        document.getElementById('pacientesList').textContent = 'No hay pacientes registrados.';
-                    }
-                } catch (error) {
-                    console.error('Error al recuperar los pacientes:', error);
-                    document.getElementById('pacientesList').textContent = 'Error al cargar los pacientes.';
-                }
-            } else {
-                document.getElementById('pacientesList').textContent = 'No has iniciado sesión.';
+            // Verificar si la respuesta fue exitosa
+            if (!response.ok) {
+              throw new Error(`Error HTTP: ${response.status}`);
             }
+
+            // Convertir la respuesta a JSON
+            const data = await response.json();
+
+            // Mostrar los datos en la consola
+            console.log("Respuesta del servidor:", data);
+
+            // Acceder directamente a la observación
+            console.log("Observación:", data.observacion);
+
+            // Si quieres guardar los datos en el localStorage:
+            localStorage.setItem("observacion_tipo", data.observacion);
+          } catch (error) {
+            console.error(
+              "Error al cargar los Tipos de datos de juego:",
+              error
+            );
+          }
+        }
+
+        circle.style.cursor = "pointer";
+        circle.addEventListener("mouseover", () => {
+          circle.setAttribute("r", "10");
+          circle.setAttribute("fill", "#FFBD59");
         });
-    </script>
+        circle.addEventListener("mouseleave", () => {
+          circle.setAttribute("r", "6");
+          circle.setAttribute("fill", "red");
+        });
+
+        // Añadir etiquetas a los puntos (opcional)
+        const text = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text"
+        );
+        text.setAttribute("x", x + 8);
+        text.setAttribute("y", y + 3);
+        text.setAttribute("font-size", "12");
+        text.setAttribute("fill", "black");
+        text.textContent = index;
+
+        svg.appendChild(circle);
+        svg.appendChild(text);
+      });
+
+      // Agregar SVG al contenedor del paciente
+      container.appendChild(svg);
+
+      return container;
+    }
+
+    const container = document.getElementById("patients-container");
+    const pacientes: any[] = await fetch(
+      `http://localhost:80/usuarios/pacientes.php?id_usuario=${sessionStorage.getItem("id")}`
+    ).then((res) => res.json());
+
+    // Función principal para cargar pacientes y generar gráficos
+    async function loadPatients(pacientes: any[]) {
+      try {
+        // Crear un gráfico para cada paciente
+        pacientes.forEach((patient) => {
+          const handSvg = createHandSvg(patient);
+          container.appendChild(handSvg);
+        });
+      } catch (error) {
+        console.error("Error al cargar los pacientes:", error);
+      }
+    }
+
+    const searchInput = document.getElementById("search-input");
+    searchInput?.addEventListener("input", (event) => {
+      event.preventDefault();
+      const { value } = event.target as HTMLInputElement;
+      //console.log(input.value);
+      const filteredPacientes = pacientes.filter(
+        (paciente) =>
+          paciente.nombre.toLowerCase().includes(value.toLowerCase()) ||
+          paciente.apellido.toLowerCase().includes(value.toLowerCase())
+      );
+
+      while (container?.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+
+      loadPatients(filteredPacientes);
+    });
+
+    // Ordenar pacientes alfabéticamente por nombre y apellido
+    pacientes.sort((a, b) => {
+      const nombreA = a.nombre.toLowerCase();
+      const nombreB = b.nombre.toLowerCase();
+      if (nombreA < nombreB) return -1;
+      if (nombreA > nombreB) return 1;
+
+      // Si los nombres son iguales, ordenar por apellido
+      const apellidoA = a.apellido.toLowerCase();
+      const apellidoB = b.apellido.toLowerCase();
+      if (apellidoA < apellidoB) return -1;
+      if (apellidoA > apellidoB) return 1;
+
+      return 0;
+    });
+
+    localStorage.setItem("pacientes_activos", pacientes.length.toString());
+
+    // Llamar a la función al cargar la página
+    loadPatients(pacientes);
+  </script>
+
+  <style>
+    #patients-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      place-items: center;
+    }
+    #search-container {
+      display: flex;
+      flex: 1;
+      justify-content: center;
+      align-items: center;
+      margin-top: 10px;
+    }
+    #search-input {
+      width: 60%;
+      height: 25px;
+      border-radius: 4px;
+      background-color: #fafafa;
+    }
+  </style>
 </Layout>
-
-<style is:global>
-    :root {
-        --primary-color: #03A1CF;
-        --secondary-color: #FFBD59;
-        --background-light: #f8f9fa;
-        --text-dark: #121212;
-        --accent-gradient: linear-gradient(45deg, #03A1CF, #FFBD59 70%);
-    }
-
-    html {
-        font-family: 'Helvetica Neue', sans-serif;
-        background: var(--background-light);
-        color: var(--text-dark);
-        margin: 0;
-        padding: 0;
-    }
-
-    h1 {
-        font-size: 4rem;
-        font-weight: 700;
-        line-height: 1.1;
-        text-align: center;
-        padding-bottom: 20px;
-    }
-
-    h2 {
-        color: var(--primary-color);
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 20px;
-        text-align: center;
-    }
-
-    .info-container {
-        padding: 20px;
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .button-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 15px;
-    }
-
-    .button-container button {
-        background-color: var(--primary-color);
-        color: white;
-        padding: 10px 20px;
-        font-size: 1.2rem;
-        border: none;
-        border-radius: 5px;
-        transition: background-color 0.3s ease;
-        cursor: pointer;
-        width: 50%;
-        text-align: center;
-    }
-
-    .button-container button:hover {
-        background-color: var(--secondary-color);
-    }
-
-    .paciente-list {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
-    width: 80%;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.paciente-item {
-    background-color: white;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    transition: transform 0.2s;
-    width: 45%; /* Ajusta este valor para que se vean más elementos en una fila */
-    margin: 10px;
-}
-
-.paciente-item:hover {
-    transform: translateY(-5px);
-    background: var(--accent-gradient);
-    color: white;
-}
-
-    .paciente-item strong {
-        display: block;
-        font-size: 1.1rem;
-    }
-
-    .paciente-item small {
-        color: gray;
-    }
-</style>

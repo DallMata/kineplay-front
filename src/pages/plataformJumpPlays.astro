@@ -16,7 +16,6 @@ import Chart from "chart.js/auto";
         </style>
       </head>
       <body>
-        <h1>Información Jugadas</h1>
         <h4 id="account-info"></h4>
 
         <!-- Caja de información -->
@@ -53,13 +52,15 @@ import Chart from "chart.js/auto";
 
             const nombrePaciente = localStorage.getItem("nombre_paciente");
             const apellidoPaciente = localStorage.getItem("apellido_paciente");
+            let observacion = localStorage.getItem("observacion_tipo");
+            observacion = observacion.split(".")[0];
 
             const accountInfoDiv = document.getElementById("account-info");
 
             if (idUsuario) {
               accountInfoDiv.innerHTML = `
                                 <div>
-                                    <h2>ID USUARIO: ${idUsuario} </h2>
+                                    <h1>${observacion}</h1>
                                     <h2>Médico: ${nombreUsuario} ${apellidoUsuario}</h2>
                                     <h2>Paciente: ${nombrePaciente} ${apellidoPaciente}</h2>
                                 </div>
@@ -72,8 +73,11 @@ import Chart from "chart.js/auto";
 
         <script>
           const dniPaciente = localStorage.getItem("dni_paciente");
+          const idTipo = localStorage.getItem("id_tipo");
           // Hacer la solicitud AJAX para obtener todos los datos de los juegos // `http://localhost:80/usuarios/pacientes.php?id_usuario=${idUsuario}`
-          fetch(`http://localhost/usuarios/juegos.php?dni=${dniPaciente}`)
+          fetch(
+            `http://localhost/usuarios/juegos.php?id_tipo=${idTipo}&dni=${dniPaciente}`
+          )
             .then((response) => response.json())
             .then((data) => {
               if (data.error) {

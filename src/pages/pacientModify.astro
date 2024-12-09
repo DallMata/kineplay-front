@@ -13,25 +13,38 @@ const { title } = Astro.props;
 <Layout title="loginLayout">
   <body>
     <div class="login-container">
-      <h2>Crear Paciente</h2>
+      <h2>Perfíl de Paciente</h2>
       <form id="registerForm" onsubmit="handleRegister(event)">
         <div class="input-group">
           <div class="input-group">
             <label for="nombre">Nombre</label>
-            <input type="text" id="nombre" name="nombre" required />
+            <input type="text" id="nombre" name="nombre" value="" required />
           </div>
           <div class="input-group">
             <label for="apellido">Apellido</label>
-            <input type="text" id="apellido" name="apellido" required />
+            <input
+              type="text"
+              id="apellido"
+              name="apellido"
+              value=""
+              required
+            />
           </div>
           <div class="input-group">
             <label for="dni">DNI</label>
-            <input type="number" id="dni" name="dni" required />
+            <input
+              type="number"
+              id="dni"
+              name="dni"
+              value=""
+              required
+              disabled
+            />
           </div>
 
           <div class="input-group">
-            <label for="clave">Contraseña</label>
-            <input type="password" id="clave" name="password" required />
+            <label for="clave">Nueva Contraseña</label>
+            <input type="password" id="clave" name="password" value="" />
           </div>
           <div class="checkbox-group">
             <label style="padding-inline: 20px;"
@@ -55,7 +68,7 @@ const { title } = Astro.props;
             </label>
           </div>
           <div class="button-container">
-            <Button title="Crear" body="" imageSrc="" color="#FFBD59" />
+            <Button title="Actualizar" body="" imageSrc="" color="#FFBD59" />
             <ButtonOldCopy
               href="pacients"
               title="Volver"
@@ -68,6 +81,35 @@ const { title } = Astro.props;
       </form>
 
       <script client:load>
+        // Valores dinámicos predefinidos para los campos
+        const initialValues = {
+          nombre: localStorage.getItem("nombre_paciente"),
+          apellido: localStorage.getItem("apellido_paciente"),
+          dni: localStorage.getItem("dni_paciente"),
+        };
+
+        // Aplicar los valores iniciales al cargar la página
+        window.addEventListener("DOMContentLoaded", () => {
+          // Supongamos que las asignaciones están en localStorage como un array JSON
+          const asignaciones =
+            JSON.parse(localStorage.getItem("asignaciones_paciente")) || [];
+
+          // Verifica si el ID de la asignación está en el array y marca el checkbox correspondiente
+          if (asignaciones.length == 2) {
+            document.getElementById("spaceEvation").checked = true;
+            document.getElementById("platformJump").checked = true;
+          } else if (asignaciones[0].id_aplicacion == 1) {
+            document.getElementById("spaceEvation").checked = true;
+          } else {
+            document.getElementById("platformJump").checked = true;
+          }
+
+          Object.keys(initialValues).forEach((id) => {
+            const input = document.getElementById(id);
+            if (input) input.value = initialValues[id];
+          });
+        });
+
         async function handleRegister(event) {
           event.preventDefault(); // Evitar que se recargue la página
 
@@ -100,15 +142,18 @@ const { title } = Astro.props;
             nombre: nombre,
             apellido: apellido,
             dni: dni,
-            clave: clave,
             id_usuario: id_usuario,
             id_aplicaciones: aplicaciones, // Aquí se asignan las aplicaciones seleccionadas
           };
 
+          if (clave.trim() !== "") {
+            pacientData.clave = clave;
+          }
+
           try {
             // Enviar la solicitud POST al backend
             const response = await fetch(
-              "http://localhost/usuarios/pacientes.php?create=true",
+              "http://localhost/usuarios/pacientes.php?update=true",
               {
                 method: "POST",
                 headers: {
@@ -120,7 +165,7 @@ const { title } = Astro.props;
 
             // Manejar la respuesta
             if (response.ok) {
-              alert("Paciente creado exitosamente.");
+              alert("Paciente Editado exitosamente.");
               window.location.href = "/pacients"; // Redirigir a la página de pacientes
             } else {
               const errorData = await response.json();

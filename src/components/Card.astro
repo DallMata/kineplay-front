@@ -1,102 +1,102 @@
 ---
 interface Props {
-	title: string;
-	body: string;
-	href: string;
-	imageSrc: string;
+  title: string;
+  body: string;
+  href: string;
+  imageSrc: string;
 }
 
 const { href, title, body, imageSrc } = Astro.props;
 ---
 
 <li class="link-card">
-	<a href={href}>
-		<div class="card-content">
-			{imageSrc && <img src={imageSrc} alt={title} class="card-image" />}
-			<div class="text-content">
-				<h2>{title}</h2>
-				<p>{body}</p>
-			</div>
-		</div>
-	</a>
+  <a href={href}>
+    <div class="card-content">
+      {imageSrc && <img src={imageSrc} alt={title} class="card-image" />}
+      <div class="text-content">
+        <h2>{title}</h2>
+        <p>{body}</p>
+      </div>
+    </div>
+  </a>
 </li>
 
 <style>
-	.link-card {
-		list-style: none;
-		position: relative;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background-color: transparent;
-		width: 100%;
-		height: 100%;
-		overflow: hidden;
-	}
+  .link-card {
+    list-style: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    width: 100%;
+    height: 100px;
+    overflow: hidden;
+  }
 
-	.link-card::before {
-		content: "";
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background: #03A1CF;
-		z-index: 0;
-		transition: background 0.9s ease;
-		opacity: 0.8;
-	}
+  .link-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #03a1cf;
+    z-index: 0;
+    transition: background 0.9s ease;
+    opacity: 0.8;
+  }
 
-	.link-card > a {
-		position: relative;
-		z-index: 1;
-		width: 100%;
-		text-decoration: none;
-		line-height: 1.4;
-		color: white;
-		font-size: 1.25rem;
-		display: flex;
-		align-items: center;
-		justify-content: center; /* Alinea los items al principio */
-		padding: 1rem;
-	}
+  .link-card > a {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    text-decoration: none;
+    line-height: 1.4;
+    color: white;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Alinea los items al principio */
+    padding: 1rem;
+  }
 
-	.card-content {
-		display: flex;
-		align-items: center;
-	}
+  .card-content {
+    display: flex;
+    align-items: center;
+  }
 
-	.card-image {
-		width: 40px; /* Tamaño adecuado de la imagen */
-		height: 40px; /* Igualar ancho y alto */
-		margin-right: 1rem; /* Espacio entre la imagen y el texto */
-		object-fit: contain; /* Asegura que la imagen no se deforme */
-	}
+  .card-image {
+    width: 40px; /* Tamaño adecuado de la imagen */
+    height: 40px; /* Igualar ancho y alto */
+    margin-right: 1rem; /* Espacio entre la imagen y el texto */
+    object-fit: contain; /* Asegura que la imagen no se deforme */
+  }
 
-	.text-content {
-		display: flex;
-		flex-direction: column;
-	}
+  .text-content {
+    display: flex;
+    flex-direction: column;
+  }
 
-	h2 {
-		margin: 0;
-		color: white;
-	}
+  h2 {
+    margin: 0;
+    color: white;
+  }
 
-	p {
-		margin: 0.5rem 0 0 0;
-		color: white;
-	}
+  p {
+    margin: 0.5rem 0 0 0;
+    color: white;
+  }
 
-	.link-card:hover::before {
-		background-position: 0;
-		background-image: linear-gradient(90deg, white, #03A1CF);
-		opacity: 0.4;
-	}
+  .link-card:hover::before {
+    background-position: 0;
+    background-image: linear-gradient(90deg, white, #03a1cf);
+    opacity: 0.4;
+  }
 
-	@media (max-width: 768px) {
-		.link-card {
-			width: 100%;
-		}
-	}
+  @media (max-width: 768px) {
+    .link-card {
+      width: 100%;
+    }
+  }
 </style>

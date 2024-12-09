@@ -4,75 +4,195 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
 ---
 
 <Layout title="Cuenta">
-    <style>
-        #account-info {
-            font-family: 'Arial', sans-serif;
-            background-color: #f0f8ff;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-            margin: 40px auto;
-            text-align: center;
-            color: #333;
+  <div id="account-info">
+    <p>Cargando datos del usuario...</p>
+  </div>
+  <div id="memberships-container">
+    <h2>Membresías</h2>
+    <!-- Las membresías se cargarán dinámicamente aquí -->
+  </div>
+
+  <div class="button-container">
+    <ButtonOldCopy
+      href="login"
+      title="Salir"
+      body=""
+      imageSrc=""
+      color="#e65046"
+    />
+  </div>
+
+  <script>
+    // Este script se ejecutará en el cliente (navegador)
+    document.addEventListener("DOMContentLoaded", async () => {
+      const idUsuario = sessionStorage.getItem("id");
+      const nombreUsuario = sessionStorage.getItem("nombre");
+      const apellidoUsuario = sessionStorage.getItem("apellido");
+      const mailUsuario = sessionStorage.getItem("email");
+      const dniUsuario = sessionStorage.getItem("dni");
+      const pacientesActivos = localStorage.getItem("pacientes_activos");
+
+      const accountInfoDiv = document.getElementById("account-info");
+
+      async function fetchAccountMembership() {
+        try {
+          const response = await fetch(
+            `http://localhost/usuarios/membresias.php?id_usuario=${idUsuario}`
+          );
+
+          if (!response.ok) {
+            throw new Error("Error al obtener las membresías");
+          }
+
+          const data = await response.json(); // Convertir la respuesta en JSON
+          return data;
+        } catch (error) {
+          console.error("Error al cargar las membresías:", error);
+          return null;
         }
+      }
 
-        h2 {
-            color: #03A1CF;
-            font-size: 1.8rem;
-            margin-bottom: 15px;
+      if (idUsuario) {
+        const membership = await fetchAccountMembership();
+
+        // Crear la información de la cuenta con o sin membresía
+        accountInfoDiv.innerHTML = `
+      <div>
+        <h2>Bienvenido, ${nombreUsuario} ${apellidoUsuario}!</h2>
+        <p>Email: ${mailUsuario}</p>
+        <p>DNI: ${dniUsuario}</p>
+        ${
+          membership
+            ? `<p>${membership.titulo}</p>
+              <p>Sesiones Activas ${pacientesActivos}/${membership.sesiones_maximas}</p>`
+            : `<p>No tienes membresías activas.</p>`
         }
+      </div>
+    `;
+      } else {
+        accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
+      }
+    });
 
-        p {
-            font-size: 1.1rem;
-            margin: 10px 0;
-            color: #666;
-        }
+    const membershipsContainer = document.getElementById(
+      "memberships-container"
+    );
 
-        .button-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-        }
-    </style>
+    // Función para crear los elementos HTML para cada membresía
+    function createMembershipCard(membership) {
+      const card = document.createElement("div");
+      card.className = "membership-card";
+      card.style.background = "#fafafa";
+      card.style.border = "3px dashed #03A1CF";
+      card.style.borderRadius = "12px";
+      card.style.margin = "10px";
 
-    <div id="account-info">
-        <p>Cargando datos del usuario...</p>
-    </div>
+      const title = document.createElement("h3");
+      title.textContent = `Membresía: ${membership.titulo}`;
+      title.style.margin = "10px";
 
-    <div class="button-container">
-        <ButtonOldCopy
-            href="login"
-            title="Salir"
-            body=""
-            imageSrc=""
-            color="#e65046"
-        />
-    </div>
+      const details = document.createElement("p");
+      details.textContent = `Observación: ${membership.observacion}`;
+      details.style.margin = "10px";
 
-    <script client:load>
-        // Este script se ejecutará en el cliente (navegador)
-        document.addEventListener('DOMContentLoaded', () => {
-            const idUsuario = sessionStorage.getItem('id');
-            const nombreUsuario = sessionStorage.getItem('nombre');
-            const apellidoUsuario = sessionStorage.getItem('apellido');
-            const mailUsuario = sessionStorage.getItem('email');
-            const dniUsuario = sessionStorage.getItem('dni');
+      const status = document.createElement("p");
+      status.textContent = `Sesiones Máximas: ${membership.sesiones_maximas}`;
+      status.style.margin = "10px";
 
-            const accountInfoDiv = document.getElementById('account-info');
+      card.appendChild(title);
+      card.appendChild(details);
+      card.appendChild(status);
 
-            if (idUsuario) {
-                accountInfoDiv.innerHTML = `
-                    <div>
-                        <h2>Bienvenido, ${nombreUsuario} ${apellidoUsuario}!</h2>
-                        <p>ID de usuario: ${idUsuario}</p>
-                        <p>Email: ${mailUsuario}</p>
-                        <p>DNI: ${dniUsuario}</p>
-                    </div>
-                `;
-            } else {
-                accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
-            }
+      return card;
+    }
+
+    // Función principal para cargar y mostrar las membresías
+    async function loadMemberships() {
+      try {
+        const memberships = await fetch(
+          "http://localhost/usuarios/membresias.php"
+        )
+          .then((res) => res.json())
+          .catch((error) => {
+            console.error("Error al obtener las membresías:", error);
+            return [];
+          });
+
+        memberships.forEach((membership) => {
+          const membershipCard = createMembershipCard(membership);
+          membershipsContainer.appendChild(membershipCard);
         });
-    </script>
+      } catch (error) {
+        console.error("Error al cargar las membresías:", error);
+      }
+    }
+
+    // Llamar a la función al cargar la página
+    loadMemberships();
+  </script>
+
+  <style>
+    #account-info {
+      font-family: "Arial", sans-serif;
+      background-color: #f0f8ff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: 40px auto;
+      text-align: center;
+      color: #333;
+    }
+
+    h2 {
+      color: #03a1cf;
+      font-size: 1.8rem;
+      margin-bottom: 15px;
+    }
+
+    p {
+      font-size: 1.1rem;
+      margin: 10px 0;
+      color: #666;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    #memberships-container {
+      display: flex;
+      flex-direction: column; /* Alinear elementos en columna */
+      align-items: center; /* Centrar horizontalmente */
+      justify-content: center; /* Centrar verticalmente */
+      padding: 20px;
+      background-color: #f8f8f8;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin: 20px auto; /* Centrar el contenedor en la página */
+      max-width: 600px; /* Limitar el ancho máximo */
+    }
+
+    .membership-card {
+      width: 100%; /* Hacer que las tarjetas ocupen todo el ancho disponible */
+      max-width: 700px; /* Limitar el ancho máximo */
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin: 10px 0;
+      background-color: #fff;
+      text-align: center; /* Centrar texto dentro de las tarjetas */
+    }
+
+    .membership-card h3 {
+      margin: 0;
+      color: #03a1cf;
+    }
+
+    .membership-card p {
+      margin: 5px 0;
+    }
+  </style>
 </Layout>

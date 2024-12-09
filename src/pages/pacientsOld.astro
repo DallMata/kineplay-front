@@ -1,0 +1,454 @@
+---
+import Button from "../components/Button.astro";
+import ButtonOldCopy from "../components/ButtonOldCopy.astro";
+import Layout from "../layouts/Layout.astro";
+import PacientCreation from "./pacientCreation.astro";
+import Hand from "../components/Hand.astro";
+---
+
+<Layout title="Pacientes">
+  <div id="account-info" class="info-container">
+    <p>Cargando datos del usuario...</p>
+  </div>
+
+  <h2 class="button-container">PACIENTES</h2>
+  <div class="button-container">
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="Buscar por nombre o DNI..."
+      oninput="filtrarPacientes()"
+      style="margin-bottom: 15px; width: 80%; padding: 10px; font-size: 1rem;"
+    />
+    <div class="button-container">
+      <ButtonOldCopy
+        href="pacientCreation"
+        title="Crear"
+        body=""
+        imageSrc=""
+        color="#03A1CF"
+      />
+    </div>
+    <div class="button-container">
+      <Hand />
+    </div>
+    <div class="list-container">
+      <div id="pacientesList" class="button-container paciente-list"></div>
+    </div>
+
+    <!-- Contenedor para las aplicaciones -->
+    <div class="button-container">
+      <ButtonOldCopy
+        href="auxiliar"
+        title="Crear"
+        body=""
+        imageSrc=""
+        color="#03A1CF"
+      />
+      <ButtonOldCopy
+        href="pacients"
+        title="Eliminar"
+        body=""
+        imageSrc=""
+        color="#e65046"
+      />
+    </div>
+
+    <script client:load>
+      //import Hand from "../components/Hand.astro";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const idUsuario = sessionStorage.getItem("id");
+        const nombreUsuario = sessionStorage.getItem("nombre");
+        const apellidoUsuario = sessionStorage.getItem("apellido");
+
+        const accountInfoDiv = document.getElementById("account-info");
+
+        if (idUsuario) {
+          accountInfoDiv.innerHTML = `
+                <div>
+                    <h2>Pacientes de ${nombreUsuario} ${apellidoUsuario}!</h2>
+                </div>
+            `;
+        } else {
+          accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
+        }
+      });
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        const idUsuario = sessionStorage.getItem("id");
+        if (idUsuario) {
+          try {
+            const response = await fetch(
+              `http://localhost:80/usuarios/pacientes.php?id_usuario=${idUsuario}`
+            );
+            const pacientes = await response.json();
+
+            if (Array.isArray(pacientes) && pacientes.length > 0) {
+              const pacientesList = document.getElementById("pacientesList");
+              for (const paciente of pacientes) {
+                const pacienteDiv = document.createElement("div");
+                pacienteDiv.classList.add("paciente-item");
+                pacienteDiv.innerHTML = `
+                            <strong>${paciente.nombre} ${paciente.apellido}</strong><br> 
+                            (DNI: ${paciente.dni})<br>
+                            <button class="eliminar-button" data-id="${paciente.id_paciente}" style="margin-top: 10px;">X</button>
+                            <div class="aplicaciones-container" id="aplicaciones-${paciente.id_paciente}"></div>
+                            <!-- Componente Hand renderizado directamente -->
+                            <div id="hand-container-${paciente.id_paciente}">
+                              <Hand />
+                            </div>
+                        `;
+
+                pacienteDiv
+                  .querySelector(".eliminar-button")
+                  .addEventListener("click", async () => {
+                    const confirmed = confirm(
+                      "¿Estás seguro de que deseas eliminar a este paciente?"
+                    );
+                    if (confirmed) {
+                      await eliminarPaciente(paciente.id_paciente);
+                      pacienteDiv.remove();
+                    }
+                  });
+
+                pacientesList.appendChild(pacienteDiv);
+
+                // Mostrar automáticamente las aplicaciones
+                await mostrarAplicaciones(paciente.id_paciente, paciente);
+              }
+            } else {
+              document.getElementById("pacientesList").textContent =
+                "No hay pacientes registrados.";
+            }
+          } catch (error) {
+            console.error("Error al recuperar los pacientes:", error);
+            document.getElementById("pacientesList").textContent =
+              "Error al cargar los pacientes.";
+          }
+        } else {
+          document.getElementById("pacientesList").textContent =
+            "No has iniciado sesión.";
+        }
+      });
+
+      async function eliminarPaciente(idPaciente) {
+        try {
+          const response = await fetch(
+            `http://localhost:80/usuarios/eliminarPaciente.php?id=${idPaciente}`,
+            {
+              method: "DELETE",
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error("Error al eliminar el paciente");
+          }
+
+          const result = await response.json();
+          alert(result.message);
+        } catch (error) {
+          console.error("Error al eliminar el paciente:", error);
+          alert("No se pudo eliminar al paciente.");
+        }
+      }
+
+      async function mostrarAplicaciones(idPaciente, paciente) {
+        const aplicacionesContainer = document.getElementById(
+          `aplicaciones-${idPaciente}`
+        );
+        aplicacionesContainer.innerHTML =
+          "<p class='loading-message'>Cargando aplicaciones...</p>";
+
+        try {
+          const response = await fetch(
+            `http://localhost:80/usuarios/aplicaciones.php?id_paciente=${idPaciente}`
+          );
+
+          if (!response.ok) {
+            throw new Error("Error en la respuesta del servidor");
+          }
+
+          const aplicaciones = await response.json();
+
+          if (Array.isArray(aplicaciones) && aplicaciones.length > 0) {
+            aplicacionesContainer.innerHTML =
+              "<h3 class='aplicaciones-title'>Aplicaciones del paciente:</h3>";
+
+            /*const { default: Hand } = await import(
+              "/src/components/Hand.astro"
+            );
+
+            const fragment = document.createElement("div");
+            fragment.innerHTML = Hand();
+            aplicacionesContainer.appendChild(fragment);*/
+
+            /*for (const aplicacion of aplicaciones) {
+              const aplicacionDiv = document.createElement("div");
+              aplicacionDiv.classList.add("aplicacion-item");
+              aplicacionDiv.innerHTML = `
+                        <div class="aplicacion-header">
+                            <strong class="aplicacion-titulo">${aplicacion.titulo}</strong>
+                        </div>
+                        <p class="aplicacion-descripcion">${aplicacion.descripcion}</p>
+                    `;
+
+              aplicacionDiv
+                .querySelector(".aplicacion-descripcion")
+                .addEventListener("click", () => {
+                  localStorage.setItem("dni_paciente", paciente.dni);
+                  localStorage.setItem("nombre_paciente", paciente.nombre);
+                  localStorage.setItem("apellido_paciente", paciente.apellido);
+                  if (aplicacion.id_aplicacion === 1) {
+                    window.location.href = "/spaceEvationPlays";
+                  } else if (aplicacion.id_aplicacion === 2) {
+                    window.location.href = "/plataformJumpPlays";
+                  } else {
+                    window.location.href = "/paginaPorDefecto";
+                  }
+                });
+
+              aplicacionesContainer.appendChild(aplicacionDiv);
+            }*/
+          } else {
+            aplicacionesContainer.innerHTML =
+              "<p class='no-aplicaciones-message'>No hay aplicaciones para este paciente.</p>";
+          }
+        } catch (error) {
+          console.error("Error al recuperar las aplicaciones:", error);
+          aplicacionesContainer.innerHTML =
+            "<p class='error-message'>Error al cargar las aplicaciones. " +
+            error.message +
+            "</p>";
+        }
+      }
+    </script>
+  </div>
+
+  <style is:global>
+    /* Colores y estilos básicos */
+    :root {
+      --primary-color: #03a1cf;
+      --secondary-color: #ffbd59;
+      --background-light: #f8f9fa;
+      --text-dark: #121212;
+      --accent-gradient: linear-gradient(45deg, #03a1cf, #ffbd59 70%);
+      --delete-color: #e65046;
+    }
+
+    /* Estilos para el cuerpo y textos */
+    html {
+      font-family: "Helvetica Neue", sans-serif;
+      background: var(--background-light);
+      color: var(--text-dark);
+      margin: 0;
+      padding: 0;
+    }
+
+    h1,
+    h2 {
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 20px;
+    }
+
+    h1 {
+      font-size: 4rem;
+      padding-bottom: 20px;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: var(--primary-color);
+    }
+
+    .info-container {
+      padding: 20px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Estilos de contenedor de botones y el botón */
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+    .list-container {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .button-container button {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 10px 20px;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 50%;
+      transition: background-color 0.3s ease;
+    }
+
+    .button-container button:hover {
+      background-color: var(--secondary-color);
+    }
+
+    /* Estilos para cada paciente */
+    .paciente-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      width: 80%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .paciente-item {
+      background-color: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      margin: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .paciente-item:hover {
+      transform: translateY(-5px);
+      background: var(--accent-gradient);
+      color: white;
+    }
+
+    .paciente-item strong {
+      display: block;
+      font-size: 1.1rem;
+    }
+
+    .ver-aplicaciones-button {
+      margin-top: 10px;
+      background-color: var(--secondary-color);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .ver-aplicaciones-button:hover {
+      background-color: var(--primary-color);
+    }
+
+    /* Estilos para las aplicaciones */
+    .aplicaciones-container {
+      width: 100%; /* Asegura que ocupe el ancho completo del contenedor padre */
+      max-width: 1000px;
+      margin: 0 auto;
+      box-sizing: border-box; /* Evita que padding o borde afecten el ancho */
+      overflow: hidden; /* Oculta cualquier desbordamiento */
+    }
+
+    .aplicacion-item {
+      width: 100%; /* Ajusta el ancho al contenedor padre */
+      box-sizing: border-box; /* Evita que padding o borde afecten el ancho */
+      padding: 15px;
+      margin: 10px 0;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+      cursor: pointer;
+      overflow: hidden; /* Oculta el contenido que se desborde */
+    }
+    .aplicacion-item strong {
+      font-size: 1.1rem;
+    }
+
+    .aplicacion-item p {
+      color: gray;
+    }
+    /* Estilo del contenedor de aplicaciones */
+    .aplicaciones-title {
+      color: var(--primary-color);
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    /* Mensaje de carga o error */
+    .loading-message,
+    .no-aplicaciones-message,
+    .error-message {
+      color: gray;
+      font-size: 1rem;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    /* Estilo para cada aplicación, similar a .paciente-item */
+    .aplicacion-item {
+      background-color: white;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin: 10px;
+      transition: transform 0.2s;
+      cursor: pointer;
+      width: 100%; /* Para que ocupen el mismo ancho */
+    }
+
+    .aplicacion-item:hover {
+      transform: translateY(-5px);
+      background: var(--accent-gradient);
+      color: white;
+    }
+
+    /* Título de cada aplicación */
+    .aplicacion-titulo {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    /* Descripción de cada aplicación */
+    .aplicacion-descripcion {
+      color: white;
+      margin-top: 5px;
+      font-size: 1.1rem;
+      font-weight: 300;
+    }
+    .eliminar-button {
+      background-color: #e65046; /* Color de fondo rojo */
+      color: white; /* Color del texto */
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition:
+        background-color 0.3s ease,
+        transform 0.2s;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra */
+    }
+
+    .eliminar-button:hover {
+      background-color: #d43c34; /* Color de fondo más oscuro en hover */
+      transform: scale(1.05); /* Efecto de agrandado */
+    }
+
+    .eliminar-button:active {
+      background-color: #c1352d; /* Color aún más oscuro al hacer clic */
+      transform: scale(1); /* Evita que crezca más en el clic */
+    }
+  </style>
+</Layout>

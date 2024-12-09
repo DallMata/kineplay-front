@@ -1,9 +1,9 @@
 ---
 // Header.astro
-import Card from './Card.astro';
+import Card from "./Card.astro";
 
 interface Props {
-	title: string;
+  title: string;
 }
 
 const { title } = Astro.props;
@@ -12,44 +12,38 @@ const { title } = Astro.props;
 <header>
   <div class="header-container">
     <ul role="list" class="link-card-grid">
-      <Card
-            href="pacients"
-            title="Pacientes"
-            body=""
-            imageSrc="paciente.png"
-        />
-        <Card
-            href="/spaceEvationPlays"
-            title="Space Evation"
-            body=""
-            imageSrc="cohete.png"
-        />
-        
-        <Card
-            href="account"
-            title="Cuenta"
-            body=""
-            imageSrc="usuarios.png"
-        />
+      <Card href="pacients" title="Pacientes" body="" imageSrc="paciente.png" />
+      {
+        /*<Card
+        href="/spaceEvationPlays"
+        title="Space Evation"
+        body=""
+        imageSrc="cohete.png"
+      />*/
+      }
+
+      <Card href="account" title="Cuenta" body="" imageSrc="usuarios.png" />
     </ul>
   </div>
 </header>
 
 <style>
   .header-container {
-    background-color: #03A1CF;
+    background-color: #03a1cf;
     color: white;
     width: 100%;
-    height: 60;
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 100px;
   }
 
   .link-card-grid {
-    
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Crea columnas que se ajustan automáticamente */
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(250px, 1fr)
+    ); /* Crea columnas que se ajustan automáticamente */
     width: 100%;
     padding: 0;
     margin: 0;
@@ -61,7 +55,7 @@ const { title } = Astro.props;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #03A1CF;
+    background-color: #03a1cf;
     color: white;
     text-align: center;
     padding: 1rem;

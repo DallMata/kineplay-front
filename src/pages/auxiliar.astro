@@ -1,0 +1,202 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="asdasdLayout">
+  <div id="patients-container"></div>
+
+  <script>
+    // Coordenadas de los landmarks de una mano (modelo base)
+    const handCoordinates = [
+      [250, 460], // 0 - base de la palma
+      [300, 400],
+      [330, 370],
+      [350, 330],
+      [360, 300], // pulgar (1-4)
+      [270, 350],
+      [260, 300],
+      [255, 250],
+      [250, 200], // índice (5-8)
+      [230, 350],
+      [225, 290],
+      [220, 230],
+      [215, 170], // medio (9-12)
+      [200, 360],
+      [190, 300],
+      [180, 250],
+      [175, 200], // anular (13-16)
+      [170, 390],
+      [160, 340],
+      [150, 290],
+      [140, 250], // meñique (17-20)
+    ];
+
+    // Conexiones entre los puntos para formar los dedos y la palma
+    const connections = [
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 4], // pulgar
+      [0, 5],
+      [5, 6],
+      [6, 7],
+      [7, 8], // índice
+      [0, 9],
+      [9, 10],
+      [10, 11],
+      [11, 12], // medio
+      [0, 13],
+      [13, 14],
+      [14, 15],
+      [15, 16], // anular
+      [0, 17],
+      [17, 18],
+      [18, 19],
+      [19, 20], // meñique
+      [1, 5],
+      [5, 9],
+      [9, 13],
+      [13, 17], // Palma
+    ];
+
+    // Función para centrar las coordenadas de la mano
+    // Función para centrar las coordenadas de la mano y mover ligeramente hacia abajo y a la izquierda
+    function centerHandCoordinates(coordinates) {
+      const centerX = coordinates[10][0];
+      const centerY = coordinates[8][1];
+
+      const offsetX = -20; // Desplazamiento hacia la izquierda
+      const offsetY = -80; // Desplazamiento hacia abajo
+
+      return coordinates.map(([x, y]) => [
+        x - centerX + offsetX,
+        y - centerY + offsetY,
+      ]);
+    }
+
+    // Función para crear el gráfico de mano de un paciente
+    function createHandSvg(patient) {
+      const container = document.createElement("div");
+      container.style.margin = "20px";
+
+      // Título con el nombre del paciente
+      const title = document.createElement("h3");
+      title.textContent = `Paciente: ${patient.nombre} ${patient.apellido}`;
+      container.appendChild(title);
+
+      // Título con el nombre del paciente
+      const dni = document.createElement("h3");
+      dni.textContent = `DNI: ${patient.dni}`;
+      container.appendChild(dni);
+
+      // Crear el elemento SVG
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "-150 -150 350 350"); // Redimensionar y centrar
+      svg.setAttribute("width", "350");
+      svg.setAttribute("height", "350");
+      svg.style.border = "1px solid black";
+
+      const centeredCoordinates = centerHandCoordinates(handCoordinates);
+
+      // Dibujar las conexiones entre los puntos
+      connections.forEach(([start, end]) => {
+        const [x1, y1] = centeredCoordinates[start];
+        const [x2, y2] = centeredCoordinates[end];
+        const line = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "line"
+        );
+        line.setAttribute("x1", x1);
+        line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2);
+        line.setAttribute("y2", y2);
+        line.setAttribute("stroke", "green");
+        line.setAttribute("stroke-width", "2");
+        svg.appendChild(line);
+      });
+
+      // Dibujar los puntos
+      centeredCoordinates.forEach(([x, y], index) => {
+        const circle = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle"
+        );
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", y);
+        circle.setAttribute("r", "5");
+        circle.setAttribute("fill", "red");
+
+        // Evento click para interactuar con el punto
+        circle.addEventListener("click", () => {
+          const userResponse = confirm(
+            `¿Desea ver las jugadas de ${patient.nombre} ${patient.apellido}\n Para la articulación número ${index}?`
+          );
+
+          if (userResponse) {
+            // Acción si el usuario presiona "Aceptar"
+            console.log(
+              `Cargando jugadas de ${patient.nombre} ${patient.apellido} para la articulación ${index}`
+            );
+            // Aquí puedes redirigir o realizar una acción, por ejemplo:
+
+            localStorage.setItem("dni_paciente", patient.dni);
+            const tipo = index + 22;
+            localStorage.setItem("id_tipo", tipo);
+
+            // Acción si el usuario presiona "Aceptar"
+            console.log(
+              `TIPO: ${localStorage.getItem("id_tipo")}; DNI: ${localStorage.getItem("dni_paciente")}`
+            );
+
+            window.location.href = `/plataformJumpPlays`;
+          } else {
+            // Acción si el usuario presiona "Cancelar"
+            console.log(
+              `El usuario canceló la acción para ${patient.nombre} ${patient.apellido}`
+            );
+          }
+        });
+
+        // Añadir etiquetas a los puntos (opcional)
+        const text = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text"
+        );
+        text.setAttribute("x", x + 8);
+        text.setAttribute("y", y + 3);
+        text.setAttribute("font-size", "12");
+        text.setAttribute("fill", "black");
+        text.textContent = index;
+
+        svg.appendChild(circle);
+        svg.appendChild(text);
+      });
+
+      // Agregar SVG al contenedor del paciente
+      container.appendChild(svg);
+      return container;
+    }
+
+    // Función principal para cargar pacientes y generar gráficos
+    async function loadPatients() {
+      try {
+        const pacientes = await fetch(
+          `http://localhost:80/usuarios/pacientes.php`
+        ).then((res) => res.json());
+
+        const container = document.getElementById("patients-container");
+
+        // Crear un gráfico para cada paciente
+        pacientes.forEach((patient) => {
+          const handSvg = createHandSvg(patient);
+          container.appendChild(handSvg);
+        });
+      } catch (error) {
+        console.error("Error al cargar los pacientes:", error);
+      }
+    }
+
+    // Llamar a la función al cargar la página
+    loadPatients();
+  </script>
+</Layout>
