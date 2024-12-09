@@ -11,4 +11,7 @@ export default defineConfig({
   output: "server",
   adapter: vercel({}),
   integrations: [svelte()],
+  server: {
+    host: true, // Cambiar localhost a 0.0.0.0
+  },
 });
