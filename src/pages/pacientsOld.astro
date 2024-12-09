@@ -80,7 +80,7 @@ import Hand from "../components/Hand.astro";
         if (idUsuario) {
           try {
             const response = await fetch(
-              `http://localhost:80/usuarios/pacientes.php?id_usuario=${idUsuario}`
+              `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/pacientes.php?id_usuario=${idUsuario}`
             );
             const pacientes = await response.json();
 
@@ -135,7 +135,7 @@ import Hand from "../components/Hand.astro";
       async function eliminarPaciente(idPaciente) {
         try {
           const response = await fetch(
-            `http://localhost:80/usuarios/eliminarPaciente.php?id=${idPaciente}`,
+            `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/eliminarPaciente.php?id=${idPaciente}`,
             {
               method: "DELETE",
             }
@@ -162,7 +162,7 @@ import Hand from "../components/Hand.astro";
 
         try {
           const response = await fetch(
-            `http://localhost:80/usuarios/aplicaciones.php?id_paciente=${idPaciente}`
+            `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/aplicaciones.php?id_paciente=${idPaciente}`
           );
 
           if (!response.ok) {

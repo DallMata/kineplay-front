@@ -181,7 +181,7 @@ import Layout from "../layouts/Layout.astro";
     async function loadPatients() {
       try {
         const pacientes = await fetch(
-          `http://localhost:80/usuarios/pacientes.php`
+          `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/pacientes.php`
         ).then((res) => res.json());
 
         const container = document.getElementById("patients-container");

@@ -125,7 +125,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
         if (userResponse) {
           try {
             const response = await fetch(
-              `http://localhost:80/usuarios/asignaciones.php?id_paciente=${patient.id_paciente}`
+              `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/asignaciones.php?id_paciente=${patient.id_paciente}`
             );
 
             if (!response.ok) {
@@ -187,7 +187,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
         );
         if (userResponse) {
           await fetch(
-            `http://localhost:80/usuarios/pacientes.php?dni=${patient.dni}`,
+            `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/pacientes.php?dni=${patient.dni}`,
             { method: "DELETE" }
           ).then(() => {
             window.location.reload();
@@ -274,7 +274,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
           try {
             // Realizar la solicitud fetch
             const response = await fetch(
-              `http://localhost:80/usuarios/tipoDatoJuegos.php?id_tipo=${tipo}`
+              `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/tipoDatoJuegos.php?id_tipo=${tipo}`
             );
 
             // Verificar si la respuesta fue exitosa
@@ -334,7 +334,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
 
     const container = document.getElementById("patients-container");
     const pacientes: any[] = await fetch(
-      `http://localhost:80/usuarios/pacientes.php?id_usuario=${sessionStorage.getItem("id")}`
+      `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/pacientes.php?id_usuario=${sessionStorage.getItem("id")}`
     ).then((res) => res.json());
 
     // Función principal para cargar pacientes y generar gráficos
