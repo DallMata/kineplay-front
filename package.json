@@ -10,19 +10,18 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.4",
-    "@astrojs/cloudflare": "^12.0.1",
-    "@astrojs/svelte": "^7.0.1",
-    "@astrojs/vercel": "^8.0.0",
-    "astro": "^5.0.4",
-    "chart.js": "^4.4.4",
-    "svelte": "^4.2.19",
-    "typescript": "^5.6.2"
+    "@astrojs/check": "0.9.4",
+    "@astrojs/cloudflare": "12.0.1",
+    "@astrojs/svelte": "7.0.1",
+    "@astrojs/vercel": "8.0.0",
+    "astro": "5.0.4",
+    "chart.js": "4.4.4",
+    "typescript": "5.6.2"
   },
   "engines": {
     "node": "20.x"
   },
   "devDependencies": {
-    "@types/chart.js": "^2.9.41"
+    "@types/chart.js": "2.9.41"
   }
 }
