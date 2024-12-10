@@ -94,13 +94,13 @@ import Chart from "chart.js/auto";
               data.forEach((juego: any, index: number) => {
                 amplitudMedias.push(juego.amplitud_media);
                 amplitudMaximas.push(juego.amplitud_maxima);
-                jugadaNumeros.push(`Jugada ${juego.id_juego}`);
+                jugadaNumeros.push(`Jugada ${index + 1}`);
 
                 const container = document.createElement("div");
                 container.className = "juego-container";
                 container.innerHTML = `
                                 <div>
-                                    <h2>Jugada ${juego.id_juego}</h2>
+                                    <h2>Jugada ${index + 1}</h2>
                                     <p><strong>Fecha:</strong> ${juego.fecha}</p>
                                     <p><strong>Tiempo Jugado:</strong> ${juego.tiempo_jugado} Segundos</p>
                                     <p><strong>Puntaje:</strong> ${juego.puntaje}</p>

@@ -65,6 +65,8 @@ const { title } = Astro.props;
   </body>
 
   <footer>
+    <p>contactanos enviándonos un mail a</p>
+    <p>kineplay.consultas@gmail.com o llamando al (+54) 011 2662 0719</p>
     <p>© 2024 KinePlay. Todos los derechos reservados.</p>
   </footer>
 
@@ -85,7 +87,8 @@ const { title } = Astro.props;
   }
   html {
     font-family: system-ui, sans-serif;
-    background: #fafafa;
+    background: url("./public/fondo1.png") no-repeat center center fixed;
+    background-size: cover; /* Asegura que la imagen cubra toda la pantalla */
     color: #121212;
     margin: 0;
     padding: 0;
@@ -131,8 +134,9 @@ const { title } = Astro.props;
     justify-content: center;
     align-items: center;
     font-size: 1.2rem;
-    color: grey;
+    color: white;
     margin-top: 10px;
+    font-weight: bold;
   }
 
   .landing-container {
@@ -156,14 +160,14 @@ const { title } = Astro.props;
 
   .info-section h2,
   .benefits-section h2 {
-    font-size: 2rem;
+    font-size: 1rem;
     color: var(--accent-dark);
     margin-bottom: 15px;
   }
 
   .info-section p,
   .benefits-section ul {
-    font-size: 1rem;
+    font-size: 0.7rem;
     line-height: 1.5;
     color: #333;
   }
@@ -190,7 +194,9 @@ const { title } = Astro.props;
   footer {
     text-align: center;
     margin-top: 50px;
-    color: #888;
+    color: black;
+    font-size: 0.7rem;
+    background-color: #fafafa;
   }
   .input-group {
     margin-bottom: 15px;

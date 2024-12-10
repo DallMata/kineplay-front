@@ -64,7 +64,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
         ${
           membership
             ? `<p>${membership.titulo}</p>
-              <p>Sesiones Activas ${pacientesActivos}/${membership.sesiones_maximas}</p>`
+              <p>Pacientes Activos ${pacientesActivos}/${membership.sesiones_maximas}</p>`
             : `<p>No tienes membresías activas.</p>`
         }
       </div>
@@ -96,7 +96,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
       details.style.margin = "10px";
 
       const status = document.createElement("p");
-      status.textContent = `Sesiones Máximas: ${membership.sesiones_maximas}`;
+      status.textContent = `Pacientes Máximos: ${membership.sesiones_maximas}`;
       status.style.margin = "10px";
 
       card.appendChild(title);
