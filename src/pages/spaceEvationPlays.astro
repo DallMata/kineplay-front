@@ -73,7 +73,7 @@ import Chart from "chart.js/auto";
         <script>
           const dniPaciente = localStorage.getItem("dni_paciente");
           fetch(
-            `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/juegos.php?dni=${dniPaciente}`
+            `http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/juegos.php?dni=${dniPaciente}`
           )
             .then((response) => response.json())
             .then((data) => {

@@ -37,7 +37,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
       async function fetchAccountMembership() {
         try {
           const response = await fetch(
-            `http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/membresias.php?id_usuario=${idUsuario}`
+            `http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/membresias.php?id_usuario=${idUsuario}`
           );
 
           if (!response.ok) {
@@ -110,7 +110,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
     async function loadMemberships() {
       try {
         const memberships = await fetch(
-          "http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/membresias.php"
+          "http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/membresias.php"
         )
           .then((res) => res.json())
           .catch((error) => {

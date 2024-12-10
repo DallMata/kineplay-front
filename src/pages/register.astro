@@ -15,7 +15,8 @@ const { title } = Astro.props;
     <header>
       <h1>
         Bienvenido a <span class="text-kine">KINE</span><span class="text-play"
-          >PLAY</span>
+          >PLAY</span
+        >
       </h1>
     </header>
 
@@ -80,7 +81,7 @@ const { title } = Astro.props;
           try {
             // Enviar la solicitud POST al backend
             const response = await fetch(
-              "http://ec2-34-202-72-75.compute-1.amazonaws.com/usuarios/usuarios.php?register=true",
+              "http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/usuarios.php?register=true",
               {
                 method: "POST",
                 headers: {
