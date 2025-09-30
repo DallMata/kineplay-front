@@ -1,312 +1,1040 @@
 ---
 import Button from "../components/Button.astro";
-import LoginLayout from "../layouts/LoginLayout.astro";
-import Layout from "../layouts/Layout.astro";
 import ButtonOldCopy from "../components/ButtonOldCopy.astro";
-
-interface Props {
-  title: string;
-}
-const { title } = Astro.props;
+import Layout from "../layouts/Layout.astro";
+import { API_BASE_URL } from "../config";
 ---
 
-<Layout title="loginLayout">
+<Layout title="Editar Paciente">
   <body>
-    <div class="login-container">
-      <h2>Perfíl de Paciente</h2>
-      <form id="registerForm" onsubmit="handleRegister(event)">
-        <div class="input-group">
-          <div class="input-group">
-            <label for="nombre">Nombre</label>
-            <input type="text" id="nombre" name="nombre" value="" required />
-          </div>
-          <div class="input-group">
-            <label for="apellido">Apellido</label>
-            <input
-              type="text"
-              id="apellido"
-              name="apellido"
-              value=""
-              required
-            />
-          </div>
+    <div class="login-container kp-card">
+      <h2 class="kp-title">Editar Paciente</h2>
+      <div class="kp-divider"></div>
+
+      <!-- Cargador rápido de DNI cuando no llega por URL -->
+      <div id="dniLoader" class="input-group hidden">
+        <label for="dniManual">Ingresá el DNI del paciente</label>
+        <input type="text" id="dniManual" placeholder="12345678" />
+        <div style="margin-top:8px">
+          <button id="dniLoadBtn" type="button" class="kp-btn-ghost"
+            >Cargar</button
+          >
+        </div>
+      </div>
+
+      <!-- Toggle de bloqueo -->
+      <div
+        class="checkbox-group"
+        style="margin-top:-6px;margin-bottom:8px;display:flex;align-items:center;gap:10px;"
+      >
+        <input type="checkbox" id="unlockToggle" />
+        <label for="unlockToggle" style="margin:0;font-weight:700"
+          >Desbloquear edición</label
+        >
+      </div>
+
+      <div id="banner" class="hidden kp-banner"></div>
+
+      <!-- FORMULARIO -->
+      <form id="editForm">
+        <!-- Campos básicos -->
+        <div class="fields-wrapper">
           <div class="input-group">
             <label for="dni">DNI</label>
-            <input
-              type="number"
-              id="dni"
-              name="dni"
-              value=""
-              required
-              disabled
-            />
+            <input type="text" id="dni" name="dni" placeholder="12345678" />
           </div>
 
           <div class="input-group">
-            <label for="clave">Nueva Contraseña</label>
-            <input type="password" id="clave" name="password" value="" />
+            <label for="nombre">Nombre</label>
+            <input type="text" id="nombre" name="nombre" required />
           </div>
-          <label>Platform Jump </label>
-          <div class="checkbox-group">
-            <label style="padding-inline: 20px;"
-              >Space Evation
-              <input
-                type="checkbox"
-                id="spaceEvation"
-                name="spaceEvation"
-                value="1"
-              />
-            </label>
+
+          <div class="input-group">
+            <label for="apellido">Apellido</label>
+            <input type="text" id="apellido" name="apellido" required />
+          </div>
+        </div>
+
+        <!-- Asignaciones -->
+        <fieldset class="apps-fieldset">
+          <legend>Asignaciones</legend>
+
+          <div class="app-row">
+            <div class="app-actions">
+              <button id="addAssignment" type="button" class="kp-btn-ghost"
+                >+ Agregar</button
+              >
+
+              <!-- Picker de app (aparece solo al clickear “Agregar”) -->
+              <select
+                id="appPicker"
+                class="app-picker hidden"
+                title="Seleccioná la aplicación"
+              >
+                <option value="">Seleccioná la aplicación…</option>
+              </select>
+            </div>
 
             <label
-              >Platform Jump
-              <input
-                type="checkbox"
-                id="platformJump"
-                name="platformJump"
-                value="2"
-              />
+              class="kp-toggle-inact"
+              title="Mostrar también asignaciones desactivadas"
+            >
+              <input type="checkbox" id="toggleInactivas" />
+              Mostrar inactivas
             </label>
           </div>
-          <div class="button-container">
-            <Button title="Actualizar" body="" imageSrc="" color="#FFBD59" />
-            <ButtonOldCopy
-              href="pacients"
-              title="Volver"
-              body=""
-              imageSrc=""
-              color="#03A1CF"
-            />
+
+          <div class="assignments-wrap">
+            <table class="assignments-table">
+              <thead>
+                <tr>
+                  <th>Aplicación</th>
+                  <th>Tiempo mínimo (min)</th>
+                  <th>Dificultad</th>
+                  <th>Jugado</th>
+                  <th>Restante</th>
+                  <th>Jugadas</th>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="assignmentsTbody"></tbody>
+            </table>
           </div>
+
+          <p class="hint">
+            Tip: poné <strong>0</strong> minutos en “Tiempo mínimo” para deshabilitar
+            el mínimo. Dificultad: <strong>1–5</strong> (Space Evation) / <strong
+              >1–3</strong
+            > (Plataform Jump).
+          </p>
+        </fieldset>
+
+        <div class="button-container buttons-lg">
+          <Button title="Guardar" body="" imageSrc="" color="#FFBD59" />
+          <ButtonOldCopy
+            href="pacients"
+            title="Volver"
+            body=""
+            imageSrc=""
+            color="#03A1CF"
+          />
         </div>
       </form>
 
+      <!-- BASE del backend -->
+      <div id="cfg" data-api-base-url={API_BASE_URL}></div>
+
       <script client:load>
-        // Valores dinámicos predefinidos para los campos
-        const initialValues = {
-          nombre: localStorage.getItem("nombre_paciente"),
-          apellido: localStorage.getItem("apellido_paciente"),
-          dni: localStorage.getItem("dni_paciente"),
+        // ========= helpers dom/fetch =========
+        var $ = function (s, root) {
+          return (root || document).querySelector(s);
+        };
+        var $$ = function (s, root) {
+          return Array.from((root || document).querySelectorAll(s));
         };
 
-        // Aplicar los valores iniciales al cargar la página
-        window.addEventListener("DOMContentLoaded", () => {
-          // Supongamos que las asignaciones están en localStorage como un array JSON
-          const asignaciones =
-            JSON.parse(localStorage.getItem("asignaciones_paciente")) || [];
+        var banner = $("#banner");
+        function showBanner(msg, kind) {
+          if (kind === void 0) kind = "info";
+          banner.textContent = msg;
+          banner.classList.remove("hidden");
+          banner.style.background =
+            kind === "error"
+              ? "#fee2e2"
+              : kind === "success"
+                ? "#dcfce7"
+                : "#dbeafe";
+          banner.style.color =
+            kind === "error"
+              ? "#991b1b"
+              : kind === "success"
+                ? "#166534"
+                : "#1e3a8a";
+        }
+        function hideBanner() {
+          banner.classList.add("hidden");
+        }
 
-          // Verifica si el ID de la asignación está en el array y marca el checkbox correspondiente
-          if (asignaciones.length == 2) {
-            document.getElementById("spaceEvation").checked = true;
-            document.getElementById("platformJump").checked = true;
-          } else if (asignaciones[0].id_aplicacion == 1) {
-            document.getElementById("spaceEvation").checked = true;
-          } else {
-            document.getElementById("platformJump").checked = true;
+        function getParam(k) {
+          var u = new URL(location.href);
+          return u.searchParams.get(k);
+        }
+        async function fetchJSON(url, opts) {
+          var res = await fetch(url, opts);
+          var isJ =
+            (res.headers.get("content-type") || "").indexOf(
+              "application/json"
+            ) !== -1;
+          var body = isJ ? await res.json() : await res.text();
+          if (!res.ok)
+            throw new Error(
+              typeof body === "string"
+                ? body
+                : body.error || JSON.stringify(body)
+            );
+          return body;
+        }
+
+        // ========= referencias =========
+        var inputs = {
+          dni: $("#dni"),
+          nombre: $("#nombre"),
+          apellido: $("#apellido"),
+        };
+        var form = $("#editForm");
+        var tbody = $("#assignmentsTbody");
+        var unlockToggle = $("#unlockToggle");
+        var toggleInactivas = $("#toggleInactivas");
+        var addBtn = $("#addAssignment");
+
+        // Dropdown dinámico que aparece al presionar "Agregar"
+        var appPicker = null; // se crea on-demand
+
+        // ========= catálogo de apps =========
+        var APPS = [
+          { id: 1, title: "Space Evation" },
+          { id: 2, title: "Plataform Jump" },
+        ];
+
+        // ========= estado =========
+        var state = {
+          locked: true,
+          paciente: { dni: "", nombre: "", apellido: "" },
+          asignaciones: [], // ver shape más abajo
+        };
+
+        // ========= utils =========
+        var secsToMinsRounded = function (s) {
+          return Math.max(0, Math.round(Number(s || 0) / 60));
+        };
+
+        function maxDifficultyForApp(appId) {
+          var n = Number(appId || 0);
+          if (n === 2) return 3; // Plataform Jump
+          return 5; // Space Evation (y otras)
+        }
+
+        // (1) FIX sin template strings
+        function renderDiffSelect(id_aplicacion, current) {
+          var max = maxDifficultyForApp(id_aplicacion);
+          var cur = Math.max(1, Math.min(max, Number(current || 1)));
+          var opts = "";
+          for (var v = 1; v <= max; v++) {
+            opts +=
+              '<option value="' +
+              v +
+              '"' +
+              (v === cur ? " selected" : "") +
+              ">" +
+              v +
+              "</option>";
+          }
+          return (
+            '<select data-assign="dificultad" class="row-input" title="1..' +
+            max +
+            '">' +
+            opts +
+            "</select>"
+          );
+        }
+
+        function setLocked(locked) {
+          state.locked = locked;
+          [inputs.dni, inputs.nombre, inputs.apellido].forEach(function (el) {
+            if (el) el.disabled = locked;
+          });
+          $$('input[data-assign]:not([data-assign="aplicacion"])').forEach(
+            function (el) {
+              el.disabled = locked;
+            }
+          );
+          $$('select[data-assign="dificultad"]').forEach(function (el) {
+            el.disabled = locked;
+          });
+          $$('input[type="date"][data-assign]').forEach(function (el) {
+            el.disabled = locked;
+          });
+          $$('input[type="number"][data-assign]').forEach(function (el) {
+            el.disabled = locked;
+          });
+          if (addBtn) addBtn.disabled = locked;
+          if (appPicker) appPicker.disabled = locked;
+        }
+
+        // ========= disponibilidad apps / add visibility =========
+        function currentAppIds() {
+          var set = new Set();
+          state.asignaciones.forEach(function (a) {
+            var id = Number(a.id_aplicacion || 0);
+            if (id) set.add(id);
+          });
+          return set;
+        }
+
+        function availableApps() {
+          var used = currentAppIds();
+          return APPS.filter(function (a) {
+            return !used.has(a.id);
+          });
+        }
+
+        function updateAddVisibility() {
+          var avail = availableApps();
+          var show = avail.length > 0; // si ya están las dos, no se muestra
+          if (addBtn) addBtn.style.display = show ? "inline-block" : "none";
+          if (appPicker) {
+            if (!show) appPicker.classList.add("hidden");
+            // (2) FIX sin template strings
+            var html = avail
+              .map(function (a) {
+                return '<option value="' + a.id + '">' + a.title + "</option>";
+              })
+              .join("");
+            appPicker.innerHTML =
+              html || '<option value="">(sin opciones)</option>';
+          }
+        }
+
+        function ensureAppPicker() {
+          if (appPicker) return appPicker;
+          appPicker = document.createElement("select");
+          appPicker.id = "appPicker";
+          appPicker.className = "row-input";
+          appPicker.style.width = "220px";
+          appPicker.style.marginLeft = "10px";
+          appPicker.style.display = "inline-block";
+          addBtn && addBtn.insertAdjacentElement("afterend", appPicker);
+          return appPicker;
+        }
+
+        // ========= filas de la tabla =========
+        function renderRow(a, idx) {
+          var tr = document.createElement("tr");
+          tr.dataset.index = String(idx);
+
+          var appLabel =
+            a.aplicacion_titulo ||
+            (a.id_aplicacion ? "App #" + a.id_aplicacion : "");
+          var minsValue =
+            a.tiempo_minimo_seg == null
+              ? 0
+              : Math.max(0, Math.round(Number(a.tiempo_minimo_seg || 0) / 60));
+          var jugadoMin = secsToMinsRounded(a.total_jugado_seg);
+          var restanteMin = secsToMinsRounded(
+            Math.max(
+              0,
+              Number(a.tiempo_minimo_seg || 0) - Number(a.total_jugado_seg || 0)
+            )
+          );
+          var cantJug = Number(a.cant_jugadas || 0);
+          var diffSelect = renderDiffSelect(a.id_aplicacion, a.dificultad);
+          var fechaInicio = a.fecha_inicio
+            ? a.fecha_inicio.substring(0, 10)
+            : "";
+          var fechaFin = a.fecha_fin ? a.fecha_fin.substring(0, 10) : "";
+          var checkedAttr = a.estado === 0 ? "" : " checked";
+
+          // Sin template strings: construir HTML por concatenación
+          var rowHtml =
+            "" +
+            "<td>" +
+            '<input data-assign="aplicacion" class="row-input" value="' +
+            appLabel +
+            '" readonly />' +
+            '<input type="hidden" data-assign="id_aplicacion" value="' +
+            (a.id_aplicacion != null ? a.id_aplicacion : "") +
+            '" />' +
+            "</td>" +
+            "<td>" +
+            '<input data-assign="tiempo_minimo_seg" type="number" class="row-input" min="0" max="120" step="1" value="' +
+            minsValue +
+            '" />' +
+            "</td>" +
+            "<td>" +
+            diffSelect +
+            "</td>" +
+            '<td><span data-role="jugado">' +
+            jugadoMin +
+            "</span></td>" +
+            '<td><span data-role="restante">' +
+            restanteMin +
+            "</span></td>" +
+            '<td><span data-role="jugadas">' +
+            cantJug +
+            "</span></td>" +
+            '<td><input data-assign="fecha_inicio" type="date" class="row-input" value="' +
+            fechaInicio +
+            '" /></td>' +
+            '<td><input data-assign="fecha_fin" type="date" class="row-input" value="' +
+            fechaFin +
+            '" /></td>' +
+            '<td><label style="display:flex; align-items:center; gap:6px; font-size:.9rem;">' +
+            '<input type="checkbox" data-assign="estado"' +
+            checkedAttr +
+            " />" +
+            "Activa" +
+            "</label></td>" +
+            '<td class="actions"><button type="button" data-action="remove">Eliminar fila</button></td>';
+
+          tr.innerHTML = rowHtml;
+
+          // respetar bloqueo
+          $$('input[data-assign]:not([data-assign="aplicacion"])', tr).forEach(
+            function (el) {
+              el.disabled = state.locked;
+            }
+          );
+          $$('select[data-assign="dificultad"]', tr).forEach(function (el) {
+            el.disabled = state.locked;
+          });
+
+          function refreshStatsCells() {
+            var i = Number(tr.dataset.index);
+            var row = state.asignaciones[i] || {};
+            var jugSpan = $('[data-role="jugado"]', tr);
+            var resSpan = $('[data-role="restante"]', tr);
+            var jugadasSpan = $('[data-role="jugadas"]', tr);
+
+            var jugMin = secsToMinsRounded(row.total_jugado_seg);
+            var restMin = secsToMinsRounded(
+              Math.max(
+                0,
+                Number(row.tiempo_minimo_seg || 0) -
+                  Number(row.total_jugado_seg || 0)
+              )
+            );
+
+            if (jugSpan) jugSpan.textContent = String(jugMin);
+            if (resSpan) resSpan.textContent = String(restMin);
+            if (jugadasSpan)
+              jugadasSpan.textContent = String(Number(row.cant_jugadas || 0));
           }
 
-          Object.keys(initialValues).forEach((id) => {
-            const input = document.getElementById(id);
-            if (input) input.value = initialValues[id];
+          tr.addEventListener("input", function (e) {
+            var t = e.target;
+            var f = t.getAttribute && t.getAttribute("data-assign");
+            if (!f) return;
+            var i = Number(tr.dataset.index);
+
+            if (f === "tiempo_minimo_seg") {
+              var mins = Math.max(0, Math.min(120, Number(t.value || 0)));
+              state.asignaciones[i].tiempo_minimo_seg = mins * 60;
+              t.value = String(mins);
+              refreshStatsCells();
+            } else if (f === "fecha_inicio" || f === "fecha_fin") {
+              state.asignaciones[i][f] = t.value;
+            }
           });
-        });
 
-        async function handleRegister(event) {
-          event.preventDefault(); // Evitar que se recargue la página
+          tr.addEventListener("change", function (e) {
+            var t = e.target;
 
-          // Obtener los valores del formulario
-          const nombre = document.getElementById("nombre").value;
-          const apellido = document.getElementById("apellido").value;
-          const dni = document.getElementById("dni").value;
-          const clave = document.getElementById("clave").value;
+            if (
+              t instanceof HTMLInputElement &&
+              t.getAttribute("data-assign") === "estado"
+            ) {
+              var i = Number(tr.dataset.index);
+              state.asignaciones[i].estado = t.checked ? 1 : 0;
+              return;
+            }
+            if (
+              t instanceof HTMLSelectElement &&
+              t.getAttribute("data-assign") === "dificultad"
+            ) {
+              var i2 = Number(tr.dataset.index);
+              var appId = state.asignaciones[i2].id_aplicacion;
+              var max = maxDifficultyForApp(appId);
+              var val = Math.max(1, Math.min(max, Number(t.value || 1)));
+              state.asignaciones[i2].dificultad = val;
+              t.value = String(val);
+            }
+          });
 
-          // Verificar si los checkboxes están marcados
-          const aplicaciones = [];
-          const spaceEvation = document.getElementById("spaceEvation");
-          const platformJump = document.getElementById("platformJump");
+          tr.addEventListener("click", function (e) {
+            var b = e.target;
+            if (
+              b instanceof HTMLButtonElement &&
+              b.dataset.action === "remove"
+            ) {
+              var i = Number(tr.dataset.index);
+              state.asignaciones.splice(i, 1);
+              redrawAssignments();
+            }
+          });
 
-          if (!spaceEvation.checked && !platformJump.checked) {
-            alert(
-              "Debes seleccionar al menos una opción (Space Evation o Platform Jump)."
+          return tr;
+        }
+
+        function redrawAssignments() {
+          tbody.innerHTML = "";
+          var showInact = !!(toggleInactivas && toggleInactivas.checked);
+          var rows = showInact
+            ? state.asignaciones
+            : state.asignaciones.filter(function (a) {
+                return (a.estado == null ? 1 : Number(a.estado)) === 1;
+              });
+          rows.forEach(function (a, i) {
+            tbody.appendChild(renderRow(a, i));
+          });
+          updateAddVisibility();
+        }
+
+        // ========= selección de DNI/ID =========
+        function pickDNI() {
+          var fromQS = getParam("dni");
+          var fromLS = localStorage.getItem("dni_paciente");
+          var fromSess = sessionStorage.getItem("kineplay_last_dni");
+          return fromQS || fromLS || fromSess || "";
+        }
+        function pickIdPaciente() {
+          return localStorage.getItem("id_usuario_paciente") || "";
+        }
+
+        // ========= carga inicial =========
+        var BASE =
+          (document.getElementById("cfg") &&
+            document.getElementById("cfg").dataset.apiBaseUrl) ||
+          "";
+        if (!BASE)
+          showBanner("Falta configurar API_BASE_URL en el front.", "error");
+
+        var dniParam = pickDNI();
+        var idPaciente = pickIdPaciente();
+
+        if (!dniParam) {
+          showBanner(
+            "No se recibió un DNI de paciente. Podés cargarlo acá abajo.",
+            "error"
+          );
+          var loader = $("#dniLoader");
+          if (loader) loader.classList.remove("hidden");
+        } else {
+          sessionStorage.setItem("kineplay_last_dni", dniParam);
+        }
+
+        async function loadData() {
+          try {
+            hideBanner();
+            showBanner("Cargando datos del paciente...", "info");
+
+            var p = await fetchJSON(
+              BASE + "/pacientes.php?dni=" + encodeURIComponent(dniParam)
+            );
+
+            if (p && (p.id_paciente || p.id_usuario)) {
+              idPaciente = String(p.id_paciente || p.id_usuario);
+              localStorage.setItem("id_usuario_paciente", idPaciente);
+            }
+
+            state.paciente = {
+              dni: (p && p.dni) || dniParam,
+              nombre: (p && p.nombre) || "",
+              apellido: (p && p.apellido) || "",
+            };
+
+            // Asignaciones con stats
+            var asign = [];
+            try {
+              if (idPaciente) {
+                asign = await fetchJSON(
+                  BASE +
+                    "/asignaciones.php?id_usuario_paciente=" +
+                    encodeURIComponent(idPaciente) +
+                    "&include_stats=1"
+                );
+              } else if (dniParam) {
+                asign = await fetchJSON(
+                  BASE +
+                    "/asignaciones.php?dni_paciente=" +
+                    encodeURIComponent(dniParam) +
+                    "&include_stats=1"
+                );
+              }
+            } catch (e) {
+              asign = [];
+            }
+
+            state.asignaciones = (asign || []).map(function (a) {
+              return {
+                id_asignacion:
+                  a.id_asignacion != null
+                    ? a.id_asignacion
+                    : a.id != null
+                      ? a.id
+                      : a.asignacion_id != null
+                        ? a.asignacion_id
+                        : a.id_asign != null
+                          ? a.id_asign
+                          : void 0,
+                id_aplicacion: a.id_aplicacion || "",
+                aplicacion_titulo: a.aplicacion_titulo || "",
+                tiempo_minimo_seg:
+                  a.tiempo_minimo_seg == null
+                    ? 0
+                    : Number(a.tiempo_minimo_seg || 0),
+                fecha_inicio: a.fecha_inicio || a.desde || "",
+                fecha_fin: a.fecha_fin || a.hasta || "",
+                estado: a.estado !== undefined ? Number(a.estado) : 1,
+                total_jugado_seg: Number(a.total_jugado_seg || 0),
+                cant_jugadas: Number(a.cant_jugadas || 0),
+                dificultad: Number(a.dificultad || 1),
+              };
+            });
+
+            inputs.dni.value = state.paciente.dni;
+            inputs.nombre.value = state.paciente.nombre;
+            inputs.apellido.value = state.paciente.apellido;
+
+            redrawAssignments();
+            showBanner(
+              'Datos cargados. Activá "Desbloquear edición" para modificar. ✅',
+              "success"
+            );
+          } catch (err) {
+            console.error(err);
+            showBanner(
+              "No se pudieron cargar los datos. Revisá el backend o el parámetro ?dni=",
+              "error"
+            );
+          }
+        }
+
+        // ========= submit/guardar =========
+        form.addEventListener("submit", async function (e) {
+          e.preventDefault();
+          if (state.locked) {
+            showBanner(
+              "Primero desbloqueá la edición para guardar cambios.",
+              "error"
             );
             return;
           }
 
-          // Agregar los valores seleccionados al array
-          if (spaceEvation.checked) aplicaciones.push(spaceEvation.value);
-          if (platformJump.checked) aplicaciones.push(platformJump.value);
-
-          const id_usuario = sessionStorage.getItem("id");
-
-          // Crear objeto con los datos del paciente
-          const pacientData = {
-            nombre: nombre,
-            apellido: apellido,
-            dni: dni,
-            id_usuario: id_usuario,
-            id_aplicaciones: aplicaciones, // Aquí se asignan las aplicaciones seleccionadas
+          state.paciente = {
+            dni: (inputs.dni.value || "").trim(),
+            nombre: (inputs.nombre.value || "").trim(),
+            apellido: (inputs.apellido.value || "").trim(),
           };
 
-          if (clave.trim() !== "") {
-            pacientData.clave = clave;
-          }
+          var payload = {
+            paciente: state.paciente,
+            asignaciones: state.asignaciones.map(function (a) {
+              return {
+                id_asignacion: a.id_asignacion,
+                id_aplicacion: Number(a.id_aplicacion) || void 0,
+                tiempo_minimo_seg: Number(a.tiempo_minimo_seg || 0),
+                fecha_inicio: a.fecha_inicio,
+                fecha_fin: a.fecha_fin,
+                estado: a.estado == null ? 1 : Number(a.estado),
+                dificultad: Number(a.dificultad || 1),
+              };
+            }),
+            id_usuario_medico: Number(sessionStorage.getItem("id")) || void 0,
+          };
 
           try {
-            // Enviar la solicitud POST al backend
-            const response = await fetch(
-              "http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/pacientes.php?update=true",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(pacientData),
-              }
+            hideBanner();
+            showBanner("Guardando cambios...", "info");
+            await fetchJSON(BASE + "/pacientes.php?update=true", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            showBanner(
+              'Cambios guardados. Las asignaciones inactivas se ocultan salvo que actives "Mostrar inactivas".',
+              "success"
             );
-
-            // Manejar la respuesta
-            if (response.ok) {
-              alert("Paciente Editado exitosamente.");
-              window.location.href = "/pacients"; // Redirigir a la página de pacientes
-            } else {
-              const errorData = await response.json();
-              alert(errorData.error || "Error al crear el paciente.");
-            }
-          } catch (error) {
-            console.error("Error en la solicitud:", error);
-            alert("Hubo un problema con la solicitud. Intente de nuevo.");
+          } catch (err) {
+            console.error(err);
+            showBanner(
+              "Error al guardar. Verificá el payload y el endpoint de actualización.",
+              "error"
+            );
           }
+        });
+
+        // ========= eventos UI (toggle, add, filtro) =========
+        unlockToggle.addEventListener("change", function () {
+          setLocked(!unlockToggle.checked);
+        });
+
+        // botón Guardar del componente
+        var saveBtn = document.querySelector(
+          ".button-container button.link-card, .button-container button"
+        );
+        if (saveBtn) {
+          saveBtn.type = "submit";
+          saveBtn.addEventListener("click", function () {
+            form && form.requestSubmit();
+          });
         }
+
+        // Mostrar/ocultar inactivas
+        toggleInactivas &&
+          toggleInactivas.addEventListener("change", redrawAssignments);
+
+        // Agregar
+        addBtn &&
+          addBtn.addEventListener("click", function () {
+            if (state.locked) {
+              showBanner(
+                "Desbloqueá la edición para agregar asignaciones.",
+                "error"
+              );
+              return;
+            }
+            var avail = availableApps();
+            if (avail.length === 0) return;
+
+            if (avail.length === 1) {
+              addAssignmentForApp(avail[0].id, avail[0].title);
+              return;
+            }
+            var sel = ensureAppPicker();
+            sel.classList.remove("hidden");
+            // (3) FIX sin template strings
+            sel.innerHTML = avail
+              .map(function (a) {
+                return '<option value="' + a.id + '">' + a.title + "</option>";
+              })
+              .join("");
+            sel.onchange = function () {
+              var id = Number(sel.value);
+              var app = APPS.find(function (a) {
+                return a.id === id;
+              });
+              if (app) {
+                addAssignmentForApp(app.id, app.title);
+              }
+              sel.classList.add("hidden");
+              sel.onchange = null;
+            };
+          });
+
+        function addAssignmentForApp(appId, title) {
+          var today = new Date();
+          var start = today.toISOString().substring(0, 10); // hoy
+          var plus30 = new Date(today);
+          plus30.setDate(plus30.getDate() + 30);
+
+          state.asignaciones.push({
+            id_asignacion: void 0,
+            id_aplicacion: appId,
+            aplicacion_titulo: title,
+            tiempo_minimo_seg: 600,
+            fecha_inicio: start,
+            fecha_fin: plus30.toISOString().substring(0, 10),
+            estado: 1,
+            total_jugado_seg: 0,
+            cant_jugadas: 0,
+            dificultad: 1,
+          });
+          redrawAssignments();
+        }
+
+        function nextFreeStartDate(appId, prefer) {
+          if (!prefer) prefer = new Date();
+          var fmt = function (d) {
+            return d.toISOString().substring(0, 10);
+          };
+          var taken = new Set(
+            state.asignaciones
+              .filter(function (a) {
+                return Number(a.id_aplicacion) === Number(appId);
+              })
+              .map(function (a) {
+                return (a.fecha_inicio || "").substring(0, 10);
+              })
+          );
+          var d = new Date(prefer);
+          for (var i = 0; i < 365; i++) {
+            var s = fmt(d);
+            if (!taken.has(s)) return s;
+            d.setDate(d.getDate() + 1);
+          }
+          return fmt(prefer);
+        }
+
+        // ========= start =========
+        setLocked(!unlockToggle.checked);
+
+        var BASE_OK = !!BASE;
+        var HAS_DNI = !!(
+          getParam("dni") ||
+          localStorage.getItem("dni_paciente") ||
+          sessionStorage.getItem("kineplay_last_dni")
+        );
+        if (BASE_OK && HAS_DNI) loadData();
+
+        // loader manual de DNI
+        var dniLoadBtn = $("#dniLoadBtn");
+        dniLoadBtn &&
+          dniLoadBtn.addEventListener("click", function () {
+            var val = (($("#dniManual") && $("#dniManual").value) || "").trim();
+            if (!val) {
+              showBanner("Ingresá un DNI válido.", "error");
+              return;
+            }
+            localStorage.removeItem("id_usuario_paciente");
+            sessionStorage.setItem("kineplay_last_dni", val);
+            location.href =
+              location.pathname + "?dni=" + encodeURIComponent(val);
+          });
+
+        // visibilidad inicial del botón Agregar
+        updateAddVisibility();
       </script>
     </div>
   </body>
 
   <style is:global>
+    /* ======= Look & Feel KinePlay ======= */
     :root {
-      --accent: 136, 58, 234;
-      --accent-light: 224, 204, 250;
-      --accent-dark: 49, 10, 101;
-      --accent-gradient: linear-gradient(
-        45deg,
-        rgb(var(--accent)),
-        rgb(var(--accent-light)) 30%,
-        white 60%
-      );
+      --kp-blue: #03a1cf;
+      --kp-gold: #ffbd59;
+      --kp-ink: #0f172a;
+      --kp-muted: #64748b;
     }
     html {
-      font-family: system-ui, sans-serif;
       background: #fafafa;
-      color: #121212;
-      margin: 0;
-      padding: 0;
     }
 
-    h1 {
-      font-size: 4rem;
-      font-weight: 700;
-      line-height: 1;
-      text-align: center;
-      padding-bottom: 20px;
+    .kp-card {
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(3, 161, 207, 0.18);
+      border-radius: 16px;
+      background: #fff;
     }
+    .kp-title {
+      margin: 0;
+      font-weight: 800;
+      color: var(--kp-ink);
+      font-size: clamp(22px, 3vw, 30px);
+      letter-spacing: 0.2px;
+      text-align: left;
+    }
+    .kp-divider {
+      width: 160px;
+      height: 6px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--kp-blue), var(--kp-gold));
+      opacity: 0.6;
+      margin: 6px 0 16px;
+    }
+
+    .kp-banner {
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .kp-banner[data-kind="error"] {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .kp-banner[data-kind="success"] {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .kp-banner[data-kind="info"] {
+      background: #dbeafe;
+      color: #1e3a8a;
+    }
+
+    .kp-btn-ghost {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(3, 161, 207, 0.35);
+      background: #fff;
+      color: #0b5f7a;
+      cursor: pointer;
+      transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        background 0.15s ease;
+    }
+    .kp-btn-ghost:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(3, 161, 207, 0.15);
+      background: rgba(3, 161, 207, 0.05);
+    }
+    .kp-btn-ghost.danger {
+      border-color: #ef4444;
+      color: #b91c1c;
+    }
+    .kp-btn-ghost.danger:hover {
+      background: #fee2e2;
+      box-shadow: none;
+    }
+
     .login-container {
-      width: 25%;
-      margin: 5px auto;
-      background-color: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-      text-align: center;
+      width: 95%;
+      min-width: 1100px;
+      margin: 20px auto;
+      padding: 26px 26px 24px;
+      text-align: left;
     }
-    h2 {
-      margin-bottom: 20px;
-      color: rgb(var(--accent-dark));
-      font-size: 2rem;
-      font-weight: 700;
-      line-height: 1;
-      text-align: center;
-      color: black;
+
+    .fields-wrapper {
+      max-width: 720px;
+      margin: 0 auto 18px auto;
     }
     .input-group,
     .checkbox-group {
-      margin-bottom: 15px;
-      text-align: left;
-      align-items: center;
-      justify-content: center;
+      margin-bottom: 14px;
     }
-
-    .checkbox-group {
-      display: flex;
-      justify-content: flex-end;
-      flex-direction: row-reverse;
-    }
-
-    .input-group label,
-    .checkbox-group label {
+    .input-group label {
       display: block;
       margin-bottom: 5px;
-      color: black;
-      font-weight: 600;
+      color: #000;
+      font-weight: 700;
     }
-    .input-group input,
-    .checkbox-group input {
-      width: 90%;
+    .input-group input {
+      width: 100%;
       padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      border: 1px solid #cfcfcf;
+      border-radius: 8px;
       font-size: 1rem;
     }
 
-    .checkbox-group label {
-      display: flex;
+    .apps-fieldset {
+      border: 2px dashed rgba(255, 189, 89, 0.55);
+      border-radius: 14px;
+      padding: 12px;
+      margin: 16px 0;
+      background: #fff;
+    }
+    .apps-fieldset legend {
+      padding: 0 6px;
+      color: #0b5f7a;
+      font-weight: 800;
     }
 
-    .text-kine {
-      color: #ffbd59;
+    .app-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
     }
-    .text-play {
-      color: #03a1cf;
+    .app-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-picker {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #cfcfcf;
+      background: #fff;
+      min-width: 220px;
+    }
+
+    .kp-toggle-inact {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.92rem;
+      margin-left: auto;
+    }
+
+    .assignments-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .assignments-table {
+      width: 100%;
+      min-width: 1200px;
+      border-collapse: collapse;
+    }
+    .assignments-table th,
+    .assignments-table td {
+      border: 1px solid #eee;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .assignments-table thead th {
+      background: linear-gradient(
+        180deg,
+        rgba(3, 161, 207, 0.06),
+        rgba(255, 189, 89, 0.06)
+      );
+      color: #0f172a;
+      font-weight: 800;
+    }
+    .assignments-table th:nth-child(2),
+    .assignments-table td:nth-child(2) {
+      width: 180px;
+    }
+    .assignments-table th:nth-child(3),
+    .assignments-table td:nth-child(3) {
+      width: 160px;
+    }
+
+    .row-input {
+      width: 100%;
+      min-width: 120px;
+      padding: 8px;
+      border: 1px solid #cfcfcf;
+      border-radius: 8px;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .kp-chip {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 14px;
+      background: rgba(3, 161, 207, 0.08);
+      border: 1px solid rgba(3, 161, 207, 0.2);
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    .actions button[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .hint {
+      margin-top: 8px;
+      color: #555;
+      font-size: 0.9rem;
     }
 
     .button-container {
       display: flex;
-      flex-direction: column; /* Alinea los botones uno encima del otro */
-      align-items: center; /* Centra los botones horizontalmente */
-      gap: 10px; /* Espacio entre los botones */
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .buttons-lg .link-card {
+      width: 300px;
+      height: 64px;
+    }
+    .buttons-lg .link-card h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
     }
 
-    button {
-      width: 80%; /* O ajusta según lo necesario para que tengan un buen tamaño */
-      padding: 10px 20px;
-    }
-    input[type="checkbox"] {
-      /*appearance: none; /* Oculta el diseño predeterminado */
-      width: 20px;
-      height: 20px;
-      border: 2px solid #03a1cf; /* Borde con color */
-      border-radius: 4px; /* Bordes redondeados */
-      background-color: white; /* Fondo blanco */
-      cursor: pointer;
-      transition: all 0.3s ease;
+    .hidden {
+      display: none;
     }
 
-    input[type="checkbox"]:checked {
-      background-color: #ffbd59; /* Fondo amarillo al estar seleccionado */
-      border-color: #ffbd59;
-      position: relative;
-    }
-
-    input[type="checkbox"]:checked::after {
-      content: "✓"; /* Marca de check */
-      display: block;
-      color: white;
-      font-size: 16px;
-      text-align: center;
-      line-height: 20px;
-    }
-
-    /* Efecto hover */
-    input[type="checkbox"]:hover {
-      border-color: #1363df;
+    @media (max-width: 1280px) {
+      .login-container {
+        min-width: auto;
+      }
+      .assignments-table {
+        min-width: 1000px;
+      }
     }
   </style>
 </Layout>

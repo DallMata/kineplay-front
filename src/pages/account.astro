@@ -1,17 +1,22 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import ButtonOldCopy from "../components/ButtonOldCopy.astro";
+import { API_BASE_URL } from "../config";
 ---
 
 <Layout title="Cuenta">
-  <div id="account-info">
+  <!-- ======= HEADER / PERFIL ======= -->
+  <section id="account-info" class="kp-card">
     <p>Cargando datos del usuario...</p>
-  </div>
-  <div id="memberships-container">
-    <h2>Membresías</h2>
-    <!-- Las membresías se cargarán dinámicamente aquí -->
-  </div>
+  </section>
 
+  <!-- ======= MEMBRESÍAS ======= -->
+  <section id="memberships-container" class="kp-card kp-memberships">
+    <h2 class="kp-section-title">Membresías</h2>
+    <!-- Cards se inyectan por JS -->
+  </section>
+
+  <!-- ======= ACCIONES ======= -->
   <div class="button-container">
     <ButtonOldCopy
       href="login"
@@ -19,180 +24,285 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
       body=""
       imageSrc=""
       color="#e65046"
+      width="280px"
+      height="56px"
     />
   </div>
 
+  <!-- base URL para fetch -->
+  <div id="cfg" data-api-base-url={API_BASE_URL}></div>
+
   <script>
-    // Este script se ejecutará en el cliente (navegador)
     document.addEventListener("DOMContentLoaded", async () => {
       const idUsuario = sessionStorage.getItem("id");
-      const nombreUsuario = sessionStorage.getItem("nombre");
-      const apellidoUsuario = sessionStorage.getItem("apellido");
-      const mailUsuario = sessionStorage.getItem("email");
-      const dniUsuario = sessionStorage.getItem("dni");
-      const pacientesActivos = localStorage.getItem("pacientes_activos");
+      const nombreUsuario = sessionStorage.getItem("nombre") || "";
+      const apellidoUsuario = sessionStorage.getItem("apellido") || "";
+      const mailUsuario = sessionStorage.getItem("email") || "";
+      const dniUsuario = sessionStorage.getItem("dni") || "";
+      const pacientesActivos = localStorage.getItem("pacientes_activos") || "0";
 
       const accountInfoDiv = document.getElementById("account-info");
 
       async function fetchAccountMembership() {
         try {
-          const response = await fetch(
-            `http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/membresias.php?id_usuario=${idUsuario}`
+          const API_BASE_URL =
+            document.getElementById("cfg").dataset.apiBaseUrl;
+          const res = await fetch(
+            `${API_BASE_URL}/membresias.php?id_usuario=${idUsuario}`
           );
-
-          if (!response.ok) {
-            throw new Error("Error al obtener las membresías");
-          }
-
-          const data = await response.json(); // Convertir la respuesta en JSON
-          return data;
-        } catch (error) {
-          console.error("Error al cargar las membresías:", error);
+          if (!res.ok) throw new Error("Error al obtener las membresías");
+          return await res.json();
+        } catch (e) {
+          console.error(e);
           return null;
         }
       }
 
-      if (idUsuario) {
-        const membership = await fetchAccountMembership();
-
-        // Crear la información de la cuenta con o sin membresía
-        accountInfoDiv.innerHTML = `
-      <div>
-        <h2>Bienvenido, ${nombreUsuario} ${apellidoUsuario}!</h2>
-        <p>Email: ${mailUsuario}</p>
-        <p>DNI: ${dniUsuario}</p>
-        ${
-          membership
-            ? `<p>${membership.titulo}</p>
-              <p>Pacientes Activos ${pacientesActivos}/${membership.sesiones_maximas}</p>`
-            : `<p>No tienes membresías activas.</p>`
-        }
-      </div>
-    `;
-      } else {
-        accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
+      if (!idUsuario) {
+        accountInfoDiv.innerHTML = `<p class="kp-muted">No has iniciado sesión.</p>`;
+        return;
       }
+
+      const membership = await fetchAccountMembership();
+
+      accountInfoDiv.innerHTML = `
+        <div class="kp-account-head">
+          <h1 class="kp-title">Mi cuenta</h1>
+          <div class="kp-divider"></div>
+        </div>
+
+        <div class="kp-grid">
+          <p><strong>Nombre:</strong> <span class="kp-chip">${nombreUsuario} ${apellidoUsuario}</span></p>
+          <p><strong>Email:</strong>  <span class="kp-chip">${mailUsuario}</span></p>
+          <p><strong>DNI:</strong>    <span class="kp-chip">${dniUsuario}</span></p>
+          ${
+            membership
+              ? `
+                <p><strong>Membresía:</strong> <span class="kp-badge">${membership.titulo}</span></p>
+                <p><strong>Pacientes Activos:</strong> <span class="kp-chip">${pacientesActivos}/${membership.sesiones_maximas}</span></p>
+              `
+              : `<p class="kp-muted">No tienes membresías activas.</p>`
+          }
+        </div>
+      `;
     });
 
     const membershipsContainer = document.getElementById(
       "memberships-container"
     );
 
-    // Función para crear los elementos HTML para cada membresía
-    function createMembershipCard(membership) {
-      const card = document.createElement("div");
+    function createMembershipCard(m) {
+      const card = document.createElement("article");
       card.className = "membership-card";
-      card.style.background = "#fafafa";
-      card.style.border = "3px dashed #03A1CF";
-      card.style.borderRadius = "12px";
-      card.style.margin = "10px";
 
-      const title = document.createElement("h3");
-      title.textContent = `Membresía: ${membership.titulo}`;
-      title.style.margin = "10px";
-
-      const details = document.createElement("p");
-      details.textContent = `Observación: ${membership.observacion}`;
-      details.style.margin = "10px";
-
-      const status = document.createElement("p");
-      status.textContent = `Pacientes Máximos: ${membership.sesiones_maximas}`;
-      status.style.margin = "10px";
-
-      card.appendChild(title);
-      card.appendChild(details);
-      card.appendChild(status);
-
+      card.innerHTML = `
+        <header class="m-head">
+          <h3 class="m-title">${m.titulo}</h3>
+          <span class="m-badge">Máx. ${m.sesiones_maximas}</span>
+        </header>
+        <p class="m-desc">${m.observacion || "—"}</p>
+      `;
       return card;
     }
 
-    // Función principal para cargar y mostrar las membresías
     async function loadMemberships() {
       try {
-        const memberships = await fetch(
-          "http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/membresias.php"
-        )
-          .then((res) => res.json())
-          .catch((error) => {
-            console.error("Error al obtener las membresías:", error);
-            return [];
-          });
-
-        memberships.forEach((membership) => {
-          const membershipCard = createMembershipCard(membership);
-          membershipsContainer.appendChild(membershipCard);
-        });
-      } catch (error) {
-        console.error("Error al cargar las membresías:", error);
+        const API_BASE_URL = document.getElementById("cfg").dataset.apiBaseUrl;
+        const list = await fetch(`${API_BASE_URL}/membresias.php`)
+          .then((r) => r.json())
+          .catch(() => []);
+        const frag = document.createDocumentFragment();
+        list.forEach((m) => frag.appendChild(createMembershipCard(m)));
+        membershipsContainer.appendChild(frag);
+      } catch (e) {
+        console.error("Error al cargar las membresías:", e);
       }
     }
-
-    // Llamar a la función al cargar la página
     loadMemberships();
   </script>
 
-  <style>
-    #account-info {
-      font-family: "Arial", sans-serif;
-      background-color: #f0f8ff;
+  <style is:global>
+    /* ======= Tokens ======= */
+    :root {
+      --kp-blue: #03a1cf;
+      --kp-gold: #ffbd59;
+      --kp-blue-10: rgba(3, 161, 207, 0.1);
+      --kp-blue-06: rgba(3, 161, 207, 0.06);
+      --kp-ink: #0f172a;
+      --kp-ink-2: #0b5f7a;
+      --kp-muted: #64748b;
+    }
+
+    /* ======= Contenedores base ======= */
+    .kp-card {
+      max-width: 980px;
+      margin: 18px auto;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(3, 161, 207, 0.18);
+    }
+
+    /* ======= Encabezado Cuenta ======= */
+    .kp-title {
+      margin: 2px 0 4px;
+      font-weight: 800;
+      font-size: clamp(22px, 3.2vw, 34px);
+      color: var(--kp-ink);
+      letter-spacing: 0.2px;
+    }
+    .kp-divider {
+      width: 140px;
+      height: 6px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--kp-blue), var(--kp-gold));
+      opacity: 0.55;
+      margin: 6px 0 10px;
+    }
+
+    .kp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px 18px;
+    }
+    .kp-grid p {
+      margin: 0;
+    }
+    .kp-grid strong {
+      color: var(--kp-ink-2);
+      font-weight: 800;
+    }
+
+    /* Chips / Badges */
+    .kp-chip {
+      display: inline-block;
+      padding: 4px 10px;
+      margin-left: 6px;
       border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-      max-width: 600px;
-      margin: 40px auto;
-      text-align: center;
-      color: #333;
+      background: rgba(3, 161, 207, 0.08);
+      border: 1px solid rgba(3, 161, 207, 0.2);
+      color: var(--kp-ink);
+      font-weight: 700;
+    }
+    .kp-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      margin-left: 6px;
+      border-radius: 999px;
+      background: rgba(255, 189, 89, 0.15);
+      border: 1px solid rgba(255, 189, 89, 0.35);
+      color: #8a5a00;
+      font-weight: 800;
+    }
+    .kp-muted {
+      color: var(--kp-muted);
     }
 
-    h2 {
-      color: #03a1cf;
-      font-size: 1.8rem;
-      margin-bottom: 15px;
+    /* ======= Sección Membresías ======= */
+    .kp-memberships {
+      padding-top: 10px;
+    }
+    .kp-section-title {
+      margin: 0 0 12px;
+      font-weight: 800;
+      color: var(--kp-ink);
+      font-size: clamp(18px, 2.2vw, 22px);
+      position: relative;
+      padding-left: 12px;
+    }
+    .kp-section-title::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 70%;
+      border-radius: 6px;
+      background: linear-gradient(var(--kp-blue), var(--kp-gold));
+      opacity: 0.9;
     }
 
-    p {
-      font-size: 1.1rem;
+    /* Grid interno (se arma solo cuando existan varias) */
+    #memberships-container {
+      display: block;
+    }
+    #memberships-container .membership-card {
+      position: relative;
+      border: 2px dashed rgba(255, 189, 89, 0.55);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background:
+        radial-gradient(
+          150px 150px at 20% 0%,
+          var(--kp-blue-06),
+          transparent 60%
+        ),
+        radial-gradient(
+          150px 150px at 100% 30%,
+          rgba(255, 189, 89, 0.1),
+          transparent 60%
+        ),
+        #fff;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
       margin: 10px 0;
-      color: #666;
+    }
+    .membership-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px rgba(3, 161, 207, 0.1);
+      border-color: rgba(255, 189, 89, 0.75);
     }
 
+    .m-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .m-title {
+      margin: 0;
+      font-weight: 800;
+      color: var(--kp-ink);
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+    .m-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(3, 161, 207, 0.1);
+      border: 1px solid rgba(3, 161, 207, 0.28);
+      color: var(--kp-ink-2);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .m-desc {
+      margin: 6px 0 0;
+      color: #0f172a;
+    }
+
+    /* ======= Botonera ======= */
     .button-container {
       display: flex;
       justify-content: center;
-      margin-top: 20px;
+      margin: 16px auto 26px;
+      max-width: 980px;
     }
 
-    #memberships-container {
-      display: flex;
-      flex-direction: column; /* Alinear elementos en columna */
-      align-items: center; /* Centrar horizontalmente */
-      justify-content: center; /* Centrar verticalmente */
-      padding: 20px;
-      background-color: #f8f8f8;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      margin: 20px auto; /* Centrar el contenedor en la página */
-      max-width: 600px; /* Limitar el ancho máximo */
-    }
-
-    .membership-card {
-      width: 100%; /* Hacer que las tarjetas ocupen todo el ancho disponible */
-      max-width: 700px; /* Limitar el ancho máximo */
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      margin: 10px 0;
-      background-color: #fff;
-      text-align: center; /* Centrar texto dentro de las tarjetas */
-    }
-
-    .membership-card h3 {
-      margin: 0;
-      color: #03a1cf;
-    }
-
-    .membership-card p {
-      margin: 5px 0;
+    /* Responsivo */
+    @media (max-width: 640px) {
+      .kp-card {
+        margin: 12px 10px;
+        padding: 14px;
+      }
+      .kp-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </Layout>

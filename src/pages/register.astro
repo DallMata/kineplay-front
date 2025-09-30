@@ -1,211 +1,319 @@
 ---
 import Button from "../components/Button.astro";
 import LoginLayout from "../layouts/LoginLayout.astro";
-import Layout from "../layouts/Layout.astro";
 import ButtonOldCopy from "../components/ButtonOldCopy.astro";
-
-interface Props {
-  title: string;
-}
-const { title } = Astro.props;
+import { API_BASE_URL } from "../config";
 ---
 
 <LoginLayout title="loginLayout">
-  <body>
-    <header>
-      <h1>
-        Bienvenido a <span class="text-kine">KINE</span><span class="text-play"
-          >PLAY</span
-        >
-      </h1>
-    </header>
+  <header>
+    <h1>
+      Bienvenido a <span class="text-kine">KINE</span><span class="text-play"
+        >PLAY</span
+      >
+    </h1>
+  </header>
 
-    <div class="login-container">
-      <h2>Iniciar sesión</h2>
-      <form id="registerForm" onsubmit="handleRegister(event)">
-        <div class="input-group">
-          <div class="input-group">
-            <label for="nombre">Nombre</label>
-            <input type="text" id="nombre" name="nombre" required />
-          </div>
-          <div class="input-group">
-            <label for="apellido">Apellido</label>
-            <input type="text" id="apellido" name="apellido" required />
-          </div>
-          <div class="input-group">
-            <label for="dni">DNI</label>
-            <input type="number" id="dni" name="dni" required />
-          </div>
-          <div class="input-group">
-            <label for="email">Email</label>
-            <input type="text" id="email" name="email" required />
-          </div>
-          <div class="input-group">
-            <label for="password">Contraseña</label>
-            <input type="password" id="password" name="password" required />
-          </div>
-          <div class="button-container">
-            <Button title="Registrarse" body="" imageSrc="" color="#FFBD59" />
-            <ButtonOldCopy
-              href="login"
-              title="Volver"
-              body=""
-              imageSrc=""
-              color="#03A1CF"
-            />
-          </div>
-        </div>
-      </form>
+  <div class="login-container">
+    <h2 class="kp-title">Registrarse</h2>
 
-      <script client:load>
-        // Función para manejar el registro
-        async function handleRegister(event) {
-          event.preventDefault(); // Evitar que se recargue la página
+    <form id="registerForm">
+      <div class="input-group">
+        <label for="nombre">Nombre</label>
+        <input type="text" id="nombre" name="nombre" required />
+      </div>
 
-          // Obtener los valores del formulario con los IDs correctos
-          const nombre = document.getElementById("nombre").value;
-          const apellido = document.getElementById("apellido").value;
-          const dni = document.getElementById("dni").value;
-          const email = document.getElementById("email").value;
-          const password = document.getElementById("password").value;
+      <div class="input-group">
+        <label for="apellido">Apellido</label>
+        <input type="text" id="apellido" name="apellido" required />
+      </div>
 
-          // Crear objeto con los datos del usuario
-          const userData = {
-            nombre: nombre,
-            apellido: apellido,
-            dni: dni,
-            email: email,
-            password: password,
-          };
+      <div class="input-group">
+        <label for="dni">DNI</label>
+        <input type="text" id="dni" name="dni" required />
+      </div>
 
-          try {
-            // Enviar la solicitud POST al backend
-            const response = await fetch(
-              "http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/usuarios.php?register=true",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(userData),
-              }
-            );
+      <div class="input-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required />
+      </div>
 
-            // Manejar la respuesta
-            if (response.ok) {
-              // Usuario creado con éxito
-              //	document.getElementById('registerMessage').style.display = 'none';
-              alert("Usuario registrado exitosamente.");
-              window.location.href = "/login"; // Redirigir a la página de login
-            } else {
-              // Error en el registro
-              const errorData = await response.json();
-              //document.getElementById('registerMessage').style.display = 'block';
+      <div class="input-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" name="password" required />
+      </div>
 
-              //document.getElementById('registerMessage').textContent = errorData.error || 'Error al registrar usuario.';
-            }
-          } catch (error) {
-            // Manejar errores de red u otros problemas
-            //document.getElementById('registerMessage').style.display = 'block';
-            //document.getElementById('registerMessage').textContent = 'Hubo un problema con la solicitud. Intente de nuevo.';
-            console.error("Error en la solicitud:", error);
-          }
+      <div id="registerMessage" class="msg hidden" aria-live="polite"></div>
+
+      <div class="button-container">
+        <Button title="Registrarse" body="" imageSrc="" color="#FFBD59" />
+        <ButtonOldCopy
+          href="login"
+          title="Volver"
+          body=""
+          imageSrc=""
+          color="#03A1CF"
+        />
+      </div>
+    </form>
+
+    <div id="cfg" data-api-base-url={API_BASE_URL}></div>
+
+    <script client:load>
+      const form = document.getElementById("registerForm");
+      const msg = document.getElementById("registerMessage");
+      const cfg = document.getElementById("cfg");
+      let submitting = false;
+
+      function showMsg(text, kind = "error") {
+        if (!msg) return;
+        msg.textContent = text;
+        msg.classList.remove("hidden");
+        msg.classList.toggle("ok", kind === "ok");
+        msg.classList.toggle("error", kind !== "ok");
+      }
+      function hideMsg() {
+        msg?.classList.add("hidden");
+        msg.textContent = "";
+      }
+
+      async function handleRegister(e) {
+        e?.preventDefault?.();
+        if (submitting) return;
+        submitting = true;
+        hideMsg();
+
+        const nombre = document.getElementById("nombre").value.trim();
+        const apellido = document.getElementById("apellido").value.trim();
+        const dni = document.getElementById("dni").value.trim();
+        const email = document
+          .getElementById("email")
+          .value.trim()
+          .toLowerCase();
+        const password = document.getElementById("password").value;
+
+        if (!nombre || !apellido || !dni || !email || !password) {
+          showMsg("Completá todos los campos requeridos.");
+          submitting = false;
+          return;
         }
-      </script>
-    </div>
-  </body>
+
+        const API = cfg?.dataset.apiBaseUrl || "";
+        if (!API) {
+          showMsg("Falta configurar API_BASE_URL en el front.");
+          submitting = false;
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API}/usuarios.php?register=true`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nombre, apellido, dni, email, password }),
+          });
+
+          const ct = res.headers.get("content-type") || "";
+          const data = ct.includes("application/json")
+            ? await res.json()
+            : await res.text();
+
+          if (!res.ok) {
+            const err =
+              typeof data === "string"
+                ? data
+                : data?.error || "Error al registrar usuario.";
+            showMsg(err);
+            submitting = false;
+            return;
+          }
+
+          showMsg("Usuario registrado exitosamente. Redirigiendo…", "ok");
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 700);
+        } catch (err) {
+          console.error(err);
+          showMsg("No se pudo contactar al servidor.");
+        } finally {
+          submitting = false;
+        }
+      }
+
+      form?.addEventListener("submit", handleRegister);
+      window.handleRegister = handleRegister;
+
+      const submitBtn = document.querySelector(
+        ".button-container button.link-card, .button-container button"
+      );
+      if (submitBtn) {
+        submitBtn.type = "submit";
+        submitBtn.addEventListener("click", () => form?.requestSubmit());
+      }
+
+      // Autocompletar email desde DNI si está vacío
+      const dniEl = document.getElementById("dni");
+      const emailEl = document.getElementById("email");
+      function sugerirEmail() {
+        const d = (dniEl?.value || "").trim();
+        if (emailEl && !emailEl.value.trim() && d) {
+          emailEl.value = `paciente_${d}@kineplay.local`;
+        }
+      }
+      dniEl?.addEventListener("input", sugerirEmail);
+      dniEl?.addEventListener("blur", sugerirEmail);
+    </script>
+  </div>
 
   <style is:global>
     :root {
-      --accent: 136, 58, 234;
-      --accent-light: 224, 204, 250;
-      --accent-dark: 49, 10, 101;
-      --accent-gradient: linear-gradient(
-        45deg,
-        rgb(var(--accent)),
-        rgb(var(--accent-light)) 30%,
-        white 60%
-      );
+      --kp-blue: #03a1cf;
+      --kp-gold: #ffbd59;
     }
+
     html {
       font-family: system-ui, sans-serif;
-      background: url("./public/fondo1.png") no-repeat center center fixed;
-      background-size: cover; /* Asegura que la imagen cubra toda la pantalla */
+      background: url("/fondo1.png") no-repeat center center fixed;
+      background-size: cover;
       color: #121212;
       margin: 0;
       padding: 0;
     }
+
+    /* Header */
     header {
-      background-color: #ffffff;
+      background: #fff;
       width: 100%;
-      display: flex; /* Activar flexbox */
-      align-items: center; /* Centra verticalmente */
-      justify-content: center; /* Centra horizontalmente */
-      padding-top: 25px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      height: 100px;
-    }
-    h1 {
-      font-size: 4rem;
-      font-weight: 700;
-      line-height: 1;
-      text-align: center;
-      padding-bottom: 20px;
-    }
-    .login-container {
-      width: 25%;
-      margin: 10px auto;
-      background-color: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-      text-align: center;
-    }
-    h2 {
-      margin-bottom: 20px;
-      color: rgb(var(--accent-dark));
-      font-size: 2rem;
-      font-weight: 700;
-      line-height: 1;
-      text-align: center;
-      color: black;
-    }
-    .input-group {
-      margin-bottom: 15px;
-      text-align: left;
+      display: flex;
       align-items: center;
       justify-content: center;
+      padding-top: 25px;
+      height: 100px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      font-weight: 900;
+      margin: 0;
+      letter-spacing: 0.5px;
+    }
+    .text-kine {
+      color: var(--kp-blue);
+    }
+    .text-play {
+      color: var(--kp-gold);
+    }
+
+    /* Card */
+    .login-container {
+      width: clamp(340px, 34vw, 560px);
+      margin: 18px auto 24px;
+      background: #fff;
+      padding: 22px 22px 24px;
+      border-radius: 16px;
+      box-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.05),
+        0 16px 36px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      backdrop-filter: blur(2px);
+    }
+
+    /* Título principal con subrayado (SOLO este) */
+    .kp-title {
+      margin: 0 0 16px;
+      font-weight: 900;
+      color: #0b1b2b;
+      letter-spacing: 0.3px;
+      position: relative;
+    }
+    .kp-title::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      bottom: -8px;
+      width: 84px;
+      height: 8px;
+      border-radius: 8px;
+      opacity: 0.45;
+      background: linear-gradient(90deg, var(--kp-blue), var(--kp-gold));
+    }
+
+    /* Inputs */
+    .input-group {
+      margin-bottom: 14px;
+      text-align: left;
     }
     .input-group label {
       display: block;
-      margin-bottom: 5px;
-      color: black;
-      font-weight: 600;
+      margin: 0 0 6px;
+      color: #000;
+      font-weight: 700;
     }
     .input-group input {
-      width: 90%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
       font-size: 1rem;
+      box-sizing: border-box;
+      background: #fff;
+      transition:
+        box-shadow 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.05s ease;
     }
-    .text-kine {
-      color: #ffbd59;
-    }
-    .text-play {
-      color: #03a1cf;
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--kp-blue);
+      box-shadow: 0 0 0 3px rgba(3, 161, 207, 0.18);
+      transform: translateY(-1px);
     }
 
+    /* Botones KinePlay */
     .button-container {
       display: flex;
-      flex-direction: column; /* Alinea los botones uno encima del otro */
-      align-items: center; /* Centra los botones horizontalmente */
-      gap: 10px; /* Espacio entre los botones */
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    /* Blindaje: no subrayado dentro de los botones */
+    .button-container .link-card a,
+    .button-container .link-card a:link,
+    .button-container .link-card a:visited {
+      text-decoration: none !important;
+      color: inherit;
+    }
+    .button-container .link-card h2::after {
+      content: none !important;
+    }
+    .button-container .link-card {
+      width: 300px !important;
+      height: 60px !important;
     }
 
-    button {
-      width: 80%; /* O ajusta según lo necesario para que tengan un buen tamaño */
-      padding: 10px 20px;
+    /* Mensajes */
+    .msg {
+      margin: 10px 0 4px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.98rem;
+      border: 1px solid transparent;
+    }
+    .msg.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+    .msg.ok {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    .hidden {
+      display: none;
     }
   </style>
 </LoginLayout>

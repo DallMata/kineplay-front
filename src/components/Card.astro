@@ -5,7 +5,6 @@ interface Props {
   href: string;
   imageSrc: string;
 }
-
 const { href, title, body, imageSrc } = Astro.props;
 ---
 
@@ -14,14 +13,20 @@ const { href, title, body, imageSrc } = Astro.props;
     <div class="card-content">
       {imageSrc && <img src={imageSrc} alt={title} class="card-image" />}
       <div class="text-content">
-        <h2>{title}</h2>
-        <p>{body}</p>
+        <h2 class="card-title">{title}</h2>
+        <p class="card-body">{body}</p>
       </div>
     </div>
   </a>
 </li>
 
-<style>
+<style is:global>
+  /* ===== Escalas configurables ===== */
+  .link-card {
+    --scale-text: 1.1; /* cuánto crece el texto en hover */
+    --scale-icon: 1.12; /* cuánto crece el ícono en hover */
+  }
+
   .link-card {
     list-style: none;
     position: relative;
@@ -32,18 +37,18 @@ const { href, title, body, imageSrc } = Astro.props;
     width: 100%;
     height: 100px;
     overflow: hidden;
+    cursor: pointer;
   }
 
   .link-card::before {
     content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background: #03a1cf;
     z-index: 0;
-    transition: background 0.9s ease;
+    transition:
+      background 0.18s ease,
+      opacity 0.18s ease;
     opacity: 0.8;
   }
 
@@ -57,20 +62,31 @@ const { href, title, body, imageSrc } = Astro.props;
     font-size: 1.25rem;
     display: flex;
     align-items: center;
-    justify-content: center; /* Alinea los items al principio */
+    justify-content: center;
     padding: 1rem;
+
+    /* leve “lift” del contenido al hover/focus */
+    transition: transform 0.18s ease;
+    will-change: transform;
   }
 
   .card-content {
     display: flex;
     align-items: center;
+    gap: 0.75rem;
   }
 
   .card-image {
-    width: 40px; /* Tamaño adecuado de la imagen */
-    height: 40px; /* Igualar ancho y alto */
-    margin-right: 1rem; /* Espacio entre la imagen y el texto */
-    object-fit: contain; /* Asegura que la imagen no se deforme */
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+
+    /* animación del ícono */
+    transition:
+      transform 0.18s ease,
+      filter 0.18s ease;
+    transform-origin: center;
+    will-change: transform;
   }
 
   .text-content {
@@ -78,20 +94,62 @@ const { href, title, body, imageSrc } = Astro.props;
     flex-direction: column;
   }
 
-  h2 {
+  .card-title,
+  .card-body {
     margin: 0;
     color: white;
+
+    /* animación del texto */
+    transition: transform 0.18s ease;
+    transform-origin: left center;
+    will-change: transform;
+  }
+  .card-body {
+    margin-top: 0.25rem;
+    font-size: 0.95rem;
   }
 
-  p {
-    margin: 0.5rem 0 0 0;
-    color: white;
-  }
-
-  .link-card:hover::before {
-    background-position: 0;
-    background-image: linear-gradient(90deg, white, #03a1cf);
+  /* ===== Hover / Focus ===== */
+  .link-card:hover::before,
+  .link-card:focus-within::before {
+    background-image: linear-gradient(90deg, #ffffff, #03a1cf);
     opacity: 0.4;
+  }
+
+  .link-card:hover > a,
+  .link-card:focus-within > a {
+    transform: translateY(-1px);
+  }
+
+  .link-card:hover .card-title,
+  .link-card:hover .card-body,
+  .link-card:focus-within .card-title,
+  .link-card:focus-within .card-body {
+    transform: scale(var(--scale-text));
+  }
+
+  .link-card:hover .card-image,
+  .link-card:focus-within .card-image {
+    transform: scale(var(--scale-icon));
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+  }
+
+  /* Accesibilidad teclado */
+  .link-card a:focus-visible {
+    outline: 3px solid #ffbd59;
+    outline-offset: 4px;
+    border-radius: 8px;
+  }
+
+  /* Respeta reduces motion */
+  @media (prefers-reduced-motion: reduce) {
+    .link-card > a,
+    .card-image,
+    .card-title,
+    .card-body,
+    .link-card::before {
+      transition: none !important;
+    }
   }
 
   @media (max-width: 768px) {

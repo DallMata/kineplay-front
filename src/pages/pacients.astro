@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import ButtonOldCopy from "../components/ButtonOldCopy.astro";
+import { API_BASE_URL } from "../config";
 ---
 
 <Layout title="pacientsLayout">
@@ -16,203 +17,199 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
       height="30px"
     />
   </div>
+
+  <div id="cfg" data-api-base-url={API_BASE_URL}></div>
+  <div id="tooltip" class="tooltip" style="display:none;"></div>
   <div id="patients-container"></div>
 
-  <script>
-    // Coordenadas de los landmarks de una mano (modelo base)
+  <script type="module">
+    import { api } from "/src/lib/api.ts";
+
+    const tooltipEl = document.getElementById("tooltip");
+    function showTooltipHTML(svg, x, y, text) {
+      tooltipEl.textContent = text;
+      tooltipEl.style.display = "block";
+      const pt = svg.createSVGPoint();
+      pt.x = x + 12;
+      pt.y = y - 8;
+      const screen = pt.matrixTransform(svg.getScreenCTM());
+      tooltipEl.style.left = `${screen.x + window.scrollX}px`;
+      tooltipEl.style.top = `${screen.y + window.scrollY}px`;
+    }
+    function hideTooltipHTML() {
+      tooltipEl.style.display = "none";
+    }
+
     const handCoordinates = [
-      [250, 460], // 0 - base de la palma
+      [250, 460],
       [300, 400],
       [330, 370],
       [350, 330],
-      [360, 300], // pulgar (1-4)
+      [360, 300],
       [270, 350],
       [260, 300],
       [255, 250],
-      [250, 200], // índice (5-8)
+      [250, 200],
       [230, 350],
       [225, 290],
       [220, 230],
-      [215, 170], // medio (9-12)
+      [215, 170],
       [200, 360],
       [190, 300],
       [180, 250],
-      [175, 200], // anular (13-16)
+      [175, 200],
       [170, 390],
       [160, 340],
       [150, 290],
-      [140, 250], // meñique (17-20)
+      [140, 250],
     ];
-
-    // Conexiones entre los puntos para formar los dedos y la palma
     const connections = [
       [0, 1],
       [1, 2],
       [2, 3],
-      [3, 4], // pulgar
+      [3, 4],
       [0, 5],
       [5, 6],
       [6, 7],
-      [7, 8], // índice
+      [7, 8],
       [0, 9],
       [9, 10],
       [10, 11],
-      [11, 12], // medio
+      [11, 12],
       [0, 13],
       [13, 14],
       [14, 15],
-      [15, 16], // anular
+      [15, 16],
       [0, 17],
       [17, 18],
       [18, 19],
-      [19, 20], // meñique
+      [19, 20],
       [1, 5],
       [5, 9],
       [9, 13],
-      [13, 17], // Palma
+      [13, 17],
     ];
-
-    // Función para centrar las coordenadas de la mano
-    // Función para centrar las coordenadas de la mano y mover ligeramente hacia abajo y a la izquierda
-    function centerHandCoordinates(coordinates) {
-      const centerX = coordinates[10][0];
-      const centerY = coordinates[8][1];
-
-      const offsetX = -20; // Desplazamiento hacia la izquierda
-      const offsetY = -80; // Desplazamiento hacia abajo
-
-      return coordinates.map(([x, y]) => [
-        x - centerX + offsetX,
-        y - centerY + offsetY,
-      ]);
+    function centerHandCoordinates(coords) {
+      const cx = coords[10][0],
+        cy = coords[8][1];
+      const ox = -20,
+        oy = -80;
+      return coords.map(([x, y]) => [x - cx + ox, y - cy + oy]);
     }
 
-    // Función para crear el gráfico de mano de un paciente
-    // Función para crear el gráfico de mano de un paciente
+    const observacionesCache = {};
+    async function getObservacion(id_tipo) {
+      if (observacionesCache[id_tipo]) return observacionesCache[id_tipo];
+      try {
+        const data = await api.tipoById(id_tipo);
+        const obs = data?.observacion ?? `Articulación ${id_tipo}`;
+        observacionesCache[id_tipo] = obs;
+        return obs;
+      } catch {
+        const obs = `Articulación ${id_tipo}`;
+        observacionesCache[id_tipo] = obs;
+        return obs;
+      }
+    }
+    (async function preloadObservaciones() {
+      const tipos = Array.from({ length: 21 }, (_, i) => 22 + i);
+      await Promise.all(tipos.map((t) => getObservacion(t).catch(() => null)));
+    })();
+
     function createHandSvg(patient) {
-      const container = document.createElement("div");
-      container.style.margin = "20px";
+      const card = document.createElement("div");
+      card.className = "hand-card";
 
-      const containerHeader = document.createElement("div");
+      const box = document.createElement("div");
+      box.className = "hand-box";
 
-      // Título con el nombre del paciente
+      const header = document.createElement("div");
+      header.className = "hand-box__header";
+
       const title = document.createElement("h3");
+      title.className = "hand-box__title";
       title.textContent = `${patient.nombre} ${patient.apellido} (DNI ${patient.dni})`;
-      container.appendChild(containerHeader);
-      containerHeader.appendChild(title);
-      title.style.color = "#444444";
 
-      // Agregar la imagen debajo del gráfico de la mano
+      const actions = document.createElement("div");
+      actions.className = "hand-box__actions";
+
       const edit = document.createElement("img");
-      edit.src = "edit.png"; // Ruta relativa de la imagen en tu proyecto
-      //edit.alt = "Imagen del paciente";
-      edit.style.display = "block"; // Asegura que la imagen esté en su propia línea
-      edit.style.marginTop = "10px"; // Espaciado arriba de la imagen
-      edit.style.maxWidth = "40px"; // Ajusta el tamaño de la imagen
-      edit.style.maxHeight = "40px"; // Ajusta el tamaño de la imagen
-      edit.id = "trash";
-      edit.style.cursor = "pointer";
-      edit.addEventListener("mouseover", () => {
-        edit.style.transform = "scale(1.1)";
-      });
-      edit.addEventListener("mouseleave", () => {
-        edit.style.transform = "scale(1)";
-      });
+      edit.src = "edit.png";
+      edit.alt = "Editar";
+      edit.title = "Editar paciente";
+      edit.className = "hand-box__icon";
+      edit.width = 30;
+      edit.height = 30;
       edit.addEventListener("click", async () => {
-        const userResponse = confirm(
-          `¿Desea editar la informacion del paciente ${patient.nombre} ${patient.apellido} con DNI ${patient.dni}?`
+        const ok = confirm(
+          `¿Editar a ${patient.nombre} ${patient.apellido} (DNI ${patient.dni})?`
         );
-        if (userResponse) {
-          try {
-            const response = await fetch(
-              `http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/asignaciones.php?id_paciente=${patient.id_paciente}`
-            );
-
-            if (!response.ok) {
-              throw new Error(`Error HTTP: ${response.status}`);
-            }
-
-            // Convertir la respuesta a JSON
-            const data = await response.json();
-
-            // Mostrar los datos en la consola
-            console.log("Respuesta del servidor:", data);
-
-            // Guardar todo el array en localStorage
-            if (data.length > 0) {
-              localStorage.setItem(
-                "asignaciones_paciente",
-                JSON.stringify(data)
-              );
-              console.log("Datos guardados en localStorage:", data);
-            } else {
-              console.warn("La respuesta del servidor está vacía.");
-            }
-
-            // Guardar datos adicionales del paciente
-            localStorage.setItem("id_paciente", patient.id_paciente);
-            localStorage.setItem("dni_paciente", patient.dni);
-            localStorage.setItem("nombre_paciente", patient.nombre);
-            localStorage.setItem("apellido_paciente", patient.apellido);
-            //localStorage.setItem("clave_paciente", patient.clave);
-
-            // Redirigir a otra página si es necesario
-            window.location.href = `/pacientModify`;
-          } catch (error) {
-            console.error("Error al realizar la solicitud:", error);
+        if (!ok) return;
+        try {
+          const data = await api.asignacionesPorPaciente(patient.id_usuario);
+          if (Array.isArray(data) && data.length > 0) {
+            localStorage.setItem("asignaciones_paciente", JSON.stringify(data));
           }
+          localStorage.setItem(
+            "id_usuario_paciente",
+            String(patient.id_usuario)
+          );
+          localStorage.setItem("dni_paciente", String(patient.dni));
+          localStorage.setItem("nombre_paciente", patient.nombre || "");
+          localStorage.setItem("apellido_paciente", patient.apellido || "");
+          window.location.href = `/pacientModify`;
+        } catch (e) {
+          console.error(e);
         }
       });
-      containerHeader.appendChild(edit);
 
-      // Agregar la imagen debajo del gráfico de la mano
-      const img = document.createElement("img");
-      img.src = "trash.png"; // Ruta relativa de la imagen en tu proyecto
-      // img.alt = "Imagen del paciente";
-      img.style.display = "block"; // Asegura que la imagen esté en su propia línea
-      img.style.marginTop = "10px"; // Espaciado arriba de la imagen
-      img.style.maxWidth = "40px"; // Ajusta el tamaño de la imagen
-      img.style.maxHeight = "40px"; // Ajusta el tamaño de la imagen
-      img.id = "trash";
-      img.style.cursor = "pointer";
-      img.addEventListener("mouseover", () => {
-        img.style.transform = "scale(1.1)";
-      });
-      img.addEventListener("mouseleave", () => {
-        img.style.transform = "scale(1)";
-      });
-      img.addEventListener("click", async () => {
-        const userResponse = confirm(
-          `¿Desea eliminar al paciente ${patient.nombre} ${patient.apellido} con DNI ${patient.dni}?`
+      const trash = document.createElement("img");
+      trash.src = "trash.png";
+      trash.alt = "Eliminar";
+      trash.title = "Eliminar paciente";
+      trash.className = "hand-box__icon";
+      trash.width = 30;
+      trash.height = 30;
+      trash.addEventListener("click", async () => {
+        const ok = confirm(
+          `¿Eliminar a ${patient.nombre} ${patient.apellido} (DNI ${patient.dni})?`
         );
-        if (userResponse) {
-          await fetch(
-            `http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/pacientes.php?dni=${patient.dni}`,
-            { method: "DELETE" }
-          ).then(() => {
-            window.location.reload();
-          });
+        if (!ok) return;
+        trash.style.pointerEvents = "none";
+        trash.style.opacity = "0.6";
+        try {
+          await api.eliminarUsuario(patient.id_usuario);
+          pacientes = pacientes.filter(
+            (p) => p.id_usuario !== patient.id_usuario
+          );
+          render(pacientes);
+        } catch (e) {
+          console.error(e);
+          alert("No se pudo eliminar el paciente. Revisá Network/Console.");
+          trash.style.pointerEvents = "auto";
+          trash.style.opacity = "1";
         }
       });
-      containerHeader.appendChild(img);
 
-      containerHeader.style.display = "flex";
-      containerHeader.style.justifyContent = "space-between";
+      actions.appendChild(edit);
+      actions.appendChild(trash);
+      header.appendChild(title);
+      header.appendChild(actions);
 
-      // Crear el elemento SVG
+      const canvas = document.createElement("div");
+      canvas.className = "hand-canvas";
+
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("viewBox", "-150 -150 350 350"); // Redimensionar y centrar
-      svg.setAttribute("width", "350");
-      svg.setAttribute("height", "350");
-      svg.style.border = "3px dashed #FFBD59";
-      svg.style.borderRadius = "16px";
+      svg.setAttribute("viewBox", "-150 -150 350 350");
+      svg.setAttribute("width", "300");
+      svg.setAttribute("height", "300");
+      svg.classList.add("hand-svg");
 
-      const centeredCoordinates = centerHandCoordinates(handCoordinates);
+      const centered = centerHandCoordinates(handCoordinates);
 
-      // Dibujar las conexiones entre los puntos
-      connections.forEach(([start, end]) => {
-        const [x1, y1] = centeredCoordinates[start];
-        const [x2, y2] = centeredCoordinates[end];
+      connections.forEach(([a, b]) => {
+        const [x1, y1] = centered[a];
+        const [x2, y2] = centered[b];
         const line = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "line"
@@ -226,188 +223,301 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
         svg.appendChild(line);
       });
 
-      // Dibujar los puntos
-      centeredCoordinates.forEach(([x, y], index) => {
-        const circle = document.createElementNS(
+      centered.forEach(([x, y], index) => {
+        const c = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "circle"
         );
-        circle.setAttribute("cx", x);
-        circle.setAttribute("cy", y);
-        circle.setAttribute("r", "6");
-        circle.setAttribute("fill", "red");
+        c.setAttribute("cx", x);
+        c.setAttribute("cy", y);
+        c.setAttribute("r", "6");
+        c.setAttribute("fill", "red");
+        c.style.cursor = "pointer";
 
-        // Evento click para interactuar con el punto
-        circle.addEventListener("click", async () => {
-          const userResponse = confirm(
-            `¿Desea ver las jugadas de ${patient.nombre} ${patient.apellido}\n Para la articulación número ${index}?`
+        c.addEventListener("click", async () => {
+          const ok = confirm(
+            `¿Ver jugadas de ${patient.nombre} ${patient.apellido} para la articulación ${index}?`
           );
-
-          if (userResponse) {
-            // Acción si el usuario presiona "Aceptar"
-            console.log(
-              `Cargando jugadas de ${patient.nombre} ${patient.apellido} para la articulación ${index}`
-            );
-            // Aquí puedes redirigir o realizar una acción, por ejemplo:
-
-            localStorage.setItem("dni_paciente", patient.dni);
-            const tipo = index + 22;
-            localStorage.setItem("id_tipo", tipo);
-
-            // Acción si el usuario presiona "Aceptar"
-            console.log(
-              `TIPO: ${localStorage.getItem("id_tipo")}; DNI: ${localStorage.getItem("dni_paciente")}`
-            );
-
-            await loadTypes(tipo);
-
-            window.location.href = `/plays`;
-          } else {
-            // Acción si el usuario presiona "Cancelar"
-            console.log(
-              `El usuario canceló la acción para ${patient.nombre} ${patient.apellido}`
-            );
-          }
-        });
-
-        async function loadTypes(tipo: number) {
+          if (!ok) return;
+          localStorage.setItem("dni_paciente", String(patient.dni));
+          localStorage.setItem(
+            "id_usuario_paciente",
+            String(patient.id_usuario)
+          );
+          localStorage.setItem("nombre_paciente", patient.nombre || "");
+          localStorage.setItem("apellido_paciente", patient.apellido || "");
+          const tipo = index + 22;
+          localStorage.setItem("id_tipo", String(tipo));
           try {
-            // Realizar la solicitud fetch
-            const response = await fetch(
-              `http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/tipoDatoJuegos.php?id_tipo=${tipo}`
-            );
-
-            // Verificar si la respuesta fue exitosa
-            if (!response.ok) {
-              throw new Error(`Error HTTP: ${response.status}`);
-            }
-
-            // Convertir la respuesta a JSON
-            const data = await response.json();
-
-            // Mostrar los datos en la consola
-            console.log("Respuesta del servidor:", data);
-
-            // Acceder directamente a la observación
-            console.log("Observación:", data.observacion);
-
-            // Si quieres guardar los datos en el localStorage:
-            localStorage.setItem("observacion_tipo", data.observacion);
-          } catch (error) {
-            console.error(
-              "Error al cargar los Tipos de datos de juego:",
-              error
-            );
-          }
-        }
-
-        circle.style.cursor = "pointer";
-        circle.addEventListener("mouseover", () => {
-          circle.setAttribute("r", "10");
-          circle.setAttribute("fill", "#FFBD59");
-        });
-        circle.addEventListener("mouseleave", () => {
-          circle.setAttribute("r", "6");
-          circle.setAttribute("fill", "red");
+            const t = await api.tipoById(tipo);
+            localStorage.setItem("observacion_tipo", t?.observacion ?? "");
+          } catch {}
+          window.location.href = `/plays`;
         });
 
-        // Añadir etiquetas a los puntos (opcional)
-        const text = document.createElementNS(
+        c.addEventListener("mouseover", async () => {
+          c.setAttribute("r", "10");
+          c.setAttribute("fill", "#FFBD59");
+          const tipo = index + 22;
+          let obs = `Articulación ${index}`;
+          try {
+            obs = await getObservacion(tipo);
+          } catch {}
+          showTooltipHTML(svg, x, y, obs);
+        });
+        c.addEventListener("mouseleave", () => {
+          c.setAttribute("r", "6");
+          c.setAttribute("fill", "red");
+          hideTooltipHTML();
+        });
+
+        const t = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "text"
         );
-        text.setAttribute("x", x + 8);
-        text.setAttribute("y", y + 3);
-        text.setAttribute("font-size", "12");
-        text.setAttribute("fill", "black");
-        text.textContent = index;
+        t.setAttribute("x", x + 8);
+        t.setAttribute("y", y + 3);
+        t.setAttribute("font-size", "12");
+        t.setAttribute("fill", "black");
+        t.textContent = String(index);
 
-        svg.appendChild(circle);
-        svg.appendChild(text);
+        svg.appendChild(c);
+        svg.appendChild(t);
       });
 
-      // Agregar SVG al contenedor del paciente
-      container.appendChild(svg);
-
-      return container;
+      canvas.appendChild(svg);
+      box.appendChild(header);
+      box.appendChild(canvas);
+      card.appendChild(box);
+      return card;
     }
 
     const container = document.getElementById("patients-container");
-    const pacientes: any[] = await fetch(
-      `http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/pacientes.php?id_usuario=${sessionStorage.getItem("id")}`
-    ).then((res) => res.json());
-
-    // Función principal para cargar pacientes y generar gráficos
-    async function loadPatients(pacientes: any[]) {
+    const searchInput = document.getElementById("search-input");
+    let pacientes = [];
+    async function fetchPacientes() {
+      container.innerHTML = "<p>Cargando pacientes…</p>";
       try {
-        // Crear un gráfico para cada paciente
-        pacientes.forEach((patient) => {
-          const handSvg = createHandSvg(patient);
-          container.appendChild(handSvg);
+        const idMedico = Number(sessionStorage.getItem("id"));
+        const data = await api.pacientesDeMedico(idMedico);
+        if (!Array.isArray(data)) throw new Error("Respuesta inesperada");
+        const activos = data.filter((p) => Number(p?.estado ?? 1) === 1);
+        activos.sort((a, b) => {
+          const na = (a.nombre || "").toLowerCase();
+          const nb = (b.nombre || "").toLowerCase();
+          if (na < nb) return -1;
+          if (na > nb) return 1;
+          const aa = (a.apellido || "").toLowerCase();
+          const ab = (b.apellido || "").toLowerCase();
+          if (aa < ab) return -1;
+          if (aa > ab) return 1;
+          return 0;
         });
-      } catch (error) {
-        console.error("Error al cargar los pacientes:", error);
+        pacientes = activos.slice();
+        localStorage.setItem("pacientes_activos", String(pacientes.length));
+        render(pacientes);
+      } catch (err) {
+        console.error(err);
+        container.innerHTML =
+          '<p style="color:#b00020">No se pudieron cargar los pacientes.</p>';
       }
     }
-
-    const searchInput = document.getElementById("search-input");
-    searchInput?.addEventListener("input", (event) => {
-      event.preventDefault();
-      const { value } = event.target as HTMLInputElement;
-      //console.log(input.value);
-      const filteredPacientes = pacientes.filter(
-        (paciente) =>
-          paciente.nombre.toLowerCase().includes(value.toLowerCase()) ||
-          paciente.apellido.toLowerCase().includes(value.toLowerCase())
-      );
-
-      while (container?.firstChild) {
-        container.removeChild(container.firstChild);
+    function render(list) {
+      container.innerHTML = "";
+      if (!list || list.length === 0) {
+        container.innerHTML = "<p>Sin pacientes para mostrar.</p>";
+        return;
       }
-
-      loadPatients(filteredPacientes);
+      list.forEach((p) => container.appendChild(createHandSvg(p)));
+    }
+    searchInput?.addEventListener("input", (event) => {
+      const value = event.target.value || "";
+      const filtered = pacientes.filter(
+        (p) =>
+          (p.nombre || "").toLowerCase().includes(value.toLowerCase()) ||
+          (p.apellido || "").toLowerCase().includes(value.toLowerCase())
+      );
+      render(filtered);
     });
-
-    // Ordenar pacientes alfabéticamente por nombre y apellido
-    pacientes.sort((a, b) => {
-      const nombreA = a.nombre.toLowerCase();
-      const nombreB = b.nombre.toLowerCase();
-      if (nombreA < nombreB) return -1;
-      if (nombreA > nombreB) return 1;
-
-      // Si los nombres son iguales, ordenar por apellido
-      const apellidoA = a.apellido.toLowerCase();
-      const apellidoB = b.apellido.toLowerCase();
-      if (apellidoA < apellidoB) return -1;
-      if (apellidoA > apellidoB) return 1;
-
-      return 0;
-    });
-
-    localStorage.setItem("pacientes_activos", pacientes.length.toString());
-
-    // Llamar a la función al cargar la página
-    loadPatients(pacientes);
+    fetchPacientes();
   </script>
 
-  <style>
+  <style is:global>
+    /* ======= Grid ======= */
     #patients-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      place-items: center;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 22px;
+      place-items: stretch;
+      padding: 12px;
     }
+
+    /* ======= Card (hueso) con hover ÚNICO ======= */
+    .hand-card {
+      position: relative;
+      border-radius: 18px;
+      padding: 3px;
+      background: #f2efea;
+      box-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.05),
+        0 12px 30px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(3, 161, 207, 0.18);
+      transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+    }
+    .hand-card:hover {
+      transform: translateY(-6px);
+      box-shadow:
+        0 14px 26px rgba(3, 161, 207, 0.12),
+        0 28px 56px rgba(0, 0, 0, 0.12);
+      border-color: rgba(3, 161, 207, 0.34);
+    }
+
+    /* ======= Recuadro interno más chico y borde suave ======= */
+    .hand-box {
+      position: relative;
+      width: min(94%, 420px);
+      margin: 0 auto;
+      border: 1px dashed rgba(255, 189, 89, 0.45);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(2px);
+      padding: 10px 12px 14px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+    }
+
+    /* ======= Header: grid 1fr auto -> evita deformaciones ======= */
+    .hand-box__header {
+      display: grid;
+      grid-template-columns: 1fr auto; /* título | acciones */
+      align-items: start;
+      column-gap: 10px;
+      row-gap: 6px;
+      min-height: 28px;
+    }
+    .hand-box__title {
+      margin: 0;
+      color: #222;
+      font-weight: 700;
+      font-size: 18px;
+      line-height: 1.2;
+      /* Evitar saltos y deformaciones: una sola línea con ellipsis */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .hand-box__actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-self: end;
+    }
+    .hand-box__icon {
+      width: 24px !important;
+      height: 24px !important;
+      max-width: none !important;
+      object-fit: contain;
+      display: inline-block;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition:
+        transform 0.15s ease,
+        opacity 0.15s ease,
+        filter 0.15s ease;
+      filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.05));
+    }
+    .hand-box__icon:hover {
+      transform: scale(1.12);
+    }
+    .hand-box__icon:active {
+      transform: scale(0.96);
+    }
+
+    /* ======= Lienzo con fondo (hueso/grises) ======= */
+    .hand-canvas {
+      margin: 2px auto 4px;
+      padding: 14px;
+      border-radius: 160px;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.9),
+          rgba(248, 247, 245, 0.9)
+        ),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'><g fill='none' stroke='%23CFCAC2' stroke-opacity='.55' stroke-width='1'><circle cx='20' cy='16' r='1.6'/><circle cx='96' cy='40' r='1.6'/><path d='M12 110h16 M20 102v16'/></g><g fill='none' stroke='%239AA3AF' stroke-opacity='.35' stroke-width='1'><rect x='72' y='72' width='8' height='8' rx='2'/><path d='M15 60 l5 5 m0 -5 l-5 5'/></g></svg>");
+      background-repeat: no-repeat, repeat;
+      background-size:
+        auto,
+        180px 180px;
+      transition:
+        background-position 0.6s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
+    }
+    .hand-card:hover .hand-canvas {
+      background-position:
+        0,
+        18px 14px;
+      box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.06),
+        0 8px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    /* ======= SVG ======= */
+    .hand-svg {
+      display: block;
+      width: 100%;
+      max-width: 300px;
+      height: auto;
+      margin: 0 auto;
+      overflow: visible;
+    }
+
+    /* ======= Tooltip ======= */
+    .tooltip {
+      position: absolute;
+      max-width: 260px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+      background: #fff;
+      color: #111;
+      border: 1px solid #03a1cf;
+      font-size: 12px;
+      line-height: 1.2;
+      pointer-events: none;
+      z-index: 9999;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    /* ======= Buscador ======= */
     #search-container {
       display: flex;
-      flex: 1;
       justify-content: center;
       align-items: center;
-      margin-top: 10px;
+      margin: 10px 0 6px;
+      gap: 8px;
     }
     #search-input {
-      width: 60%;
-      height: 25px;
-      border-radius: 4px;
-      background-color: #fafafa;
+      width: min(760px, 92%);
+      height: 32px;
+      border-radius: 8px;
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      padding: 0 12px;
+      transition:
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    }
+    #search-input:focus {
+      outline: none;
+      border-color: #03a1cf;
+      box-shadow: 0 0 0 3px rgba(3, 161, 207, 0.15);
     }
   </style>
 </Layout>

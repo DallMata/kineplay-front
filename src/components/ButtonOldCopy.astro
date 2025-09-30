@@ -22,101 +22,166 @@ const {
 
 <li
   class="link-card"
-  style={`--card-color: ${color}; width:${width}; height:${height}`}
+  style={`--card-color:${color}; width:${width}; height:${height}`}
 >
-  <a href={href}>
+  <a href={href} aria-label={title}>
     <div class="card-content">
-      {imageSrc && <img src={imageSrc} alt={title} class="card-image" />}
+      {
+        imageSrc && (
+          <img src={imageSrc} alt="" class="card-image" aria-hidden="true" />
+        )
+      }
       <div class="text-content">
-        <h2>{title}</h2>
-        <p>{body}</p>
+        <h2 class="card-title">{title}</h2>
+        <p class="card-body">{body}</p>
       </div>
     </div>
   </a>
 </li>
 
 <style>
+  /* ====== knobs ====== */
+  .link-card {
+    --hover-scale-text: 1.06; /* cuánto crece el texto en hover */
+    --hover-scale-icon: 1.12; /* cuánto crece el ícono en hover */
+    --radius: 8px;
+  }
+
   .link-card {
     list-style: none;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(
-      --card-color,
-      #03a1cf
-    ); /* El color base viene del prop */
     overflow: hidden;
     margin: 5px;
-    border-radius: 8px;
-    transition: background-color 0.5s ease;
+    border-radius: var(--radius);
+    background-color: var(--card-color, #03a1cf);
+
+    /* animaciones contenedor */
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      background-color 0.18s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
   }
 
+  /* overlay/gradiente en hover */
   .link-card::before {
     content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: none;
+    inset: 0;
     z-index: 0;
-    transition: background 0.9s ease;
+    background: none;
     opacity: 0.8;
+    pointer-events: none; /* no bloquea clicks */
+    transition:
+      background 0.18s ease,
+      opacity 0.18s ease;
+  }
+  .link-card:hover::before,
+  .link-card:focus-within::before {
+    background: linear-gradient(90deg, #ffffff, var(--card-color));
+    opacity: 0.35;
   }
 
-  .link-card:hover::before {
-    background: linear-gradient(
-      90deg,
-      white,
-      var(--card-color)
-    ); /* Gradiente de blanco al color dinámico */
+  .link-card:hover,
+  .link-card:focus-within {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  }
+  .link-card:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   }
 
+  /* ===== contenido ===== */
   .link-card > a {
     position: relative;
     z-index: 1;
     width: 100%;
     text-decoration: none;
-    line-height: 1.4;
-    color: white;
-    font-size: 1.25rem;
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    line-height: 1.4;
+
+    transition: transform 0.18s ease;
+    will-change: transform;
   }
 
   .card-content {
     display: flex;
     align-items: center;
+    gap: 0.75rem;
   }
 
   .card-image {
     width: 40px;
     height: 40px;
-    margin-right: 1rem;
     object-fit: contain;
+    transition:
+      transform 0.18s ease,
+      filter 0.18s ease;
+    transform-origin: center;
+    will-change: transform;
   }
 
   .text-content {
     display: flex;
     flex-direction: column;
   }
-
-  h2 {
+  .card-title,
+  .card-body {
     margin: 0;
-    color: white;
+    color: #fff;
+    transition: transform 0.18s ease;
+    transform-origin: left center;
+    will-change: transform;
+  }
+  .card-body {
+    font-size: 0.95rem;
+    margin-top: 0.25rem;
   }
 
-  p {
-    margin: 0.5rem 0 0 0;
-    color: white;
+  /* ===== Hover que agranda texto e ícono ===== */
+  .link-card:hover .card-title,
+  .link-card:hover .card-body,
+  .link-card:focus-within .card-title,
+  .link-card:focus-within .card-body {
+    transform: scale(var(--hover-scale-text));
+  }
+  .link-card:hover .card-image,
+  .link-card:focus-within .card-image {
+    transform: scale(var(--hover-scale-icon));
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+  }
+
+  /* Accesibilidad teclado */
+  .link-card > a:focus-visible {
+    outline: 3px solid #ffbd59;
+    outline-offset: 4px;
+    border-radius: var(--radius);
+  }
+
+  /* Reduce motion */
+  @media (prefers-reduced-motion: reduce) {
+    .link-card,
+    .link-card::before,
+    .link-card > a,
+    .card-image,
+    .card-title,
+    .card-body {
+      transition: none !important;
+    }
   }
 
   @media (max-width: 768px) {
     .link-card {
-      width: 100%;
+      width: 100% !important;
     }
   }
 </style>

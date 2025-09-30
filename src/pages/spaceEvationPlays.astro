@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Chart from "chart.js/auto";
+import { API_BASE_URL } from "../config";
 ---
 
 <Layout title="spaceEvationPlays">
@@ -39,6 +40,7 @@ import Chart from "chart.js/auto";
         <canvas id="amplitudMaximaChart" width="100%" height="20"></canvas>
 
         <div id="graficosContainer"></div>
+        <div id="cfg" data-api-base-url={API_BASE_URL}></div>
 
         <!--Script que maneja los datos del paciente -->
 
@@ -71,10 +73,10 @@ import Chart from "chart.js/auto";
         </script>
 
         <script>
+          const API_BASE_URL =
+            document.getElementById("cfg").dataset.apiBaseUrl;
           const dniPaciente = localStorage.getItem("dni_paciente");
-          fetch(
-            `http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/juegos.php?dni=${dniPaciente}`
-          )
+          fetch(`${API_BASE_URL}/juegos.php?dni=${dniPaciente}`)
             .then((response) => response.json())
             .then((data) => {
               if (data.error) {
