@@ -5,7 +5,7 @@ import ButtonOldCopy from "../components/ButtonOldCopy.astro";
 import { API_BASE_URL } from "../config";
 ---
 
-<Layout title="loginLayout">
+<Layout title="CrearPaciente">
   <body>
     <div class="login-container">
       <h2>Crear Paciente</h2>
@@ -45,13 +45,46 @@ import { API_BASE_URL } from "../config";
 
         <!-- Selección por aplicación + tiempo mínimo individual + dificultad -->
         <fieldset class="apps-fieldset">
-          <legend>Asignaciones, tiempo mínimo (min) y dificultad</legend>
+          <legend>Asignaciones, tiempo mínimo y dificultad</legend>
 
           <!-- App 1 -->
           <div class="app-row">
             <label class="app-check">
               <input type="checkbox" id="app1" value="1" />
               <span>Space Evation</span>
+
+              <!-- INFO: botón que abre modal -->
+              <button
+                type="button"
+                class="info-btn"
+                aria-label="Información de Space Evation"
+                data-title="Space Evation"
+                data-body="Juego de nave espacial para trabajar la flexión y extensión de muñeca. La dificultad varía de 1 a 5: La dificultad 1 es para pacientes con 10° o menos de flexión y extensión, 2 para 30° o menos, 3 para 50° o menos, 4 para 70° o menos y 5 para 90° o menos."
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    fill="none"
+                    stroke-width="2"></circle>
+                  <line
+                    x1="12"
+                    y1="10"
+                    x2="12"
+                    y2="16"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"></line>
+                  <circle cx="12" cy="7" r="1.6" fill="currentColor"></circle>
+                </svg>
+              </button>
             </label>
 
             <div class="app-controls">
@@ -81,6 +114,39 @@ import { API_BASE_URL } from "../config";
             <label class="app-check">
               <input type="checkbox" id="app2" value="2" />
               <span>Platform Jump</span>
+
+              <!-- INFO: botón que abre modal -->
+              <button
+                type="button"
+                class="info-btn"
+                aria-label="Información de Platform Jump"
+                data-title="Platform Jump"
+                data-body="Juego de correr y saltar para trabajar la flexion y extension de los dedos. La dificultad va de 1 a 3. La dificultad 1 es para pacientes con 20° o menos de flexión de los dedos, 2 es para 60° o menos y 3 es para lo que pueden cerrar la mano por completo."
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    fill="none"
+                    stroke-width="2"></circle>
+                  <line
+                    x1="12"
+                    y1="10"
+                    x2="12"
+                    y2="16"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"></line>
+                  <circle cx="12" cy="7" r="1.6" fill="currentColor"></circle>
+                </svg>
+              </button>
             </label>
 
             <div class="app-controls">
@@ -117,6 +183,32 @@ import { API_BASE_URL } from "../config";
       </form>
 
       <div id="cfg" data-api-base-url={API_BASE_URL}></div>
+
+      <!-- ===== MODAL GLOBAL DE INFO ===== -->
+      <div id="infoModal" class="kp-modal" aria-hidden="true">
+        <div class="kp-modal__backdrop" data-close="true"></div>
+        <div
+          class="kp-modal__dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="kpModalTitle"
+          aria-describedby="kpModalBody"
+        >
+          <button
+            class="kp-modal__close"
+            type="button"
+            aria-label="Cerrar"
+            data-close="true">✕</button
+          >
+          <h3 id="kpModalTitle" class="kp-modal__title">Título</h3>
+          <div id="kpModalBody" class="kp-modal__body">Texto de ejemplo.</div>
+          <div class="kp-modal__actions">
+            <button class="kp-modal__ok" type="button" data-close="true"
+              >Entendido</button
+            >
+          </div>
+        </div>
+      </div>
 
       <script client:load>
         // ===== Helpers =====
@@ -276,6 +368,58 @@ import { API_BASE_URL } from "../config";
               form.requestSubmit();
           });
         }
+
+        // ===== MODAL: abrir/cerrar =====
+        (function initInfoModal() {
+          var modal = document.getElementById("infoModal");
+          var titleEl = document.getElementById("kpModalTitle");
+          var bodyEl = document.getElementById("kpModalBody");
+          var lastTrigger = null;
+
+          function openModal(title, body, trigger) {
+            lastTrigger = trigger || null;
+            titleEl.textContent = title || "Información";
+            bodyEl.textContent = body || "";
+            modal.classList.add("is-open");
+            modal.setAttribute("aria-hidden", "false");
+            // bloquear scroll de fondo
+            document.documentElement.style.overflow = "hidden";
+            // foco accesible
+            modal.querySelector(".kp-modal__close").focus();
+          }
+
+          function closeModal() {
+            modal.classList.remove("is-open");
+            modal.setAttribute("aria-hidden", "true");
+            document.documentElement.style.overflow = ""; // restore
+            if (lastTrigger) {
+              try {
+                lastTrigger.focus();
+              } catch (e) {}
+            }
+          }
+
+          // Abrir con botones .info-btn
+          document.addEventListener("click", function (e) {
+            var btn = e.target.closest(".info-btn");
+            if (!btn) return;
+            var t = btn.getAttribute("data-title") || "Información";
+            var b = btn.getAttribute("data-body") || "";
+            openModal(t, b, btn);
+          });
+
+          // Cerrar con elementos que tengan data-close
+          modal.addEventListener("click", function (e) {
+            if (e.target.matches("[data-close]")) closeModal();
+          });
+
+          // Cerrar con Escape
+          document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && modal.classList.contains("is-open")) {
+              closeModal();
+            }
+          });
+        })();
       </script>
     </div>
   </body>
@@ -286,7 +430,7 @@ import { API_BASE_URL } from "../config";
       background: #fafafa;
     }
 
-    /* ===== Tarjeta/Contenedor: más angosto y centrado ===== */
+    /* ===== Tarjeta/Contenedor ===== */
     .login-container {
       width: clamp(680px, 64vw, 980px);
       max-width: 1040px;
@@ -298,7 +442,7 @@ import { API_BASE_URL } from "../config";
       text-align: left;
     }
 
-    /* Título con acento KinePlay (solo el de la página) */
+    /* Título */
     .login-container > h2 {
       margin: 0 0 14px;
       font-weight: 800;
@@ -322,12 +466,7 @@ import { API_BASE_URL } from "../config";
       opacity: 0.4;
     }
 
-    /* ⛔️ Quitar la barrita de acento en los H2 dentro de botones */
-    .button-container .link-card .text-content h2::after {
-      content: none !important;
-    }
-
-    /* ===== Inputs ===== */
+    /* Inputs */
     .input-group,
     .checkbox-group {
       margin-bottom: 14px;
@@ -347,7 +486,7 @@ import { API_BASE_URL } from "../config";
       box-sizing: border-box;
     }
 
-    /* ===== Fieldset Asignaciones ===== */
+    /* Fieldset Asignaciones */
     .apps-fieldset {
       position: relative;
       border: 1px solid rgba(3, 161, 207, 0.18);
@@ -400,20 +539,16 @@ import { API_BASE_URL } from "../config";
       accent-color: var(--kp-gold, #ffbd59);
     }
 
-    /* === FIX: que "Dificultad" quede pegado a su select === */
     .app-controls {
       display: grid;
-      /* [Min label] [Min input] [Dificultad label] [Select]  */
       grid-template-columns: auto 100px auto 160px;
       column-gap: 60px;
       row-gap: 8px;
       align-items: center;
     }
-
     .app-controls .mini-label {
       white-space: nowrap;
     }
-
     .min-input,
     .dif-select {
       width: 100%;
@@ -432,13 +567,20 @@ import { API_BASE_URL } from "../config";
       }
     }
     @media (max-width: 720px) {
+      .app-row {
+        grid-template-columns: 1fr;
+      }
       .app-controls {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: auto minmax(140px, 1fr);
         column-gap: 14px;
       }
       .app-controls .mini-label {
         justify-self: end;
         padding-right: 6px;
+      }
+      .login-container {
+        width: 94vw;
+        padding-inline: 16px;
       }
     }
 
@@ -448,7 +590,6 @@ import { API_BASE_URL } from "../config";
       color: #374151;
       font-weight: 600;
     }
-
     .min-input,
     .dif-select {
       width: 100%;
@@ -465,14 +606,13 @@ import { API_BASE_URL } from "../config";
       color: #9ca3af;
     }
 
-    /* ===== Botones ===== */
+    /* Botones */
     .button-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 10px;
     }
-
     .button-container .link-card {
       width: 300px !important;
       height: 60px !important;
@@ -534,17 +674,123 @@ import { API_BASE_URL } from "../config";
       font-size: clamp(1.25rem, 3vw, 1.5rem);
     }
 
-    @media (max-width: 720px) {
-      .login-container {
-        width: 94vw;
-        padding-inline: 16px;
-      }
-      .app-row {
-        grid-template-columns: 1fr;
-      }
-      .app-controls {
-        grid-template-columns: auto minmax(140px, 1fr);
-      }
+    /* ===== INFO BUTTON (icono i) ===== */
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      margin-left: 6px;
+      border-radius: 50%;
+      border: 1.8px solid var(--kp-blue, #03a1cf);
+      color: var(--kp-blue, #03a1cf);
+      background: #fff;
+      cursor: pointer;
+      transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease,
+        background 0.2s;
+    }
+    .info-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(3, 161, 207, 0.18);
+      background: rgba(3, 161, 207, 0.04);
+    }
+    .info-btn:focus {
+      outline: 2px solid rgba(3, 161, 207, 0.35);
+      outline-offset: 2px;
+    }
+
+    /* ===== MODAL OVERLAY ===== */
+    .kp-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 9999; /* bien arriba */
+    }
+    .kp-modal.is-open {
+      display: block;
+    }
+
+    .kp-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(2px);
+    }
+
+    .kp-modal__dialog {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(560px, 92vw);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow:
+        0 18px 50px rgba(0, 0, 0, 0.22),
+        0 6px 18px rgba(3, 161, 207, 0.18);
+      padding: 18px 18px 14px;
+      border: 1px solid rgba(3, 161, 207, 0.22);
+    }
+
+    .kp-modal__title {
+      margin: 0 36px 6px 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0b1b2b;
+    }
+
+    .kp-modal__body {
+      font-size: 0.98rem;
+      color: #0b1b2b;
+      line-height: 1.45;
+    }
+
+    .kp-modal__actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .kp-modal__ok {
+      appearance: none;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: linear-gradient(
+        90deg,
+        var(--kp-blue, #03a1cf),
+        var(--kp-gold, #ffbd59)
+      );
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(3, 161, 207, 0.16);
+    }
+
+    .kp-modal__close {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      color: #1f2937;
+    }
+    .kp-modal__close:hover {
+      background: #f8fafc;
+    }
+    .kp-modal__close:focus {
+      outline: 2px solid rgba(3, 161, 207, 0.35);
+      outline-offset: 2px;
     }
   </style>
 </Layout>

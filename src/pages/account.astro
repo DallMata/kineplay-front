@@ -33,6 +33,17 @@ import { API_BASE_URL } from "../config";
   <div id="cfg" data-api-base-url={API_BASE_URL}></div>
 
   <script>
+    // ==== Helper precio ====
+    const formatPrice = (precio) => {
+      const n = Number(precio);
+      if (!Number.isFinite(n)) return "—";
+      if (n === 0) return "Gratis";
+      return `USD ${n.toLocaleString("es-AR", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      })}`;
+    };
+
     document.addEventListener("DOMContentLoaded", async () => {
       const idUsuario = sessionStorage.getItem("id");
       const nombreUsuario = sessionStorage.getItem("nombre") || "";
@@ -65,6 +76,24 @@ import { API_BASE_URL } from "../config";
 
       const membership = await fetchAccountMembership();
 
+      // ===== Helpers GOLD / INFINITO =====
+      const isTitleS = (m) => (m?.titulo || "").trim().toUpperCase() === "S";
+      const isMaxSentinel = (m) => {
+        const n = Number(m?.sesiones_maximas);
+        return Number.isFinite(n) && n >= 50000; // tu caso actual
+      };
+      const isGold = (m) => !!m && (isTitleS(m) || isMaxSentinel(m));
+      const prettyMax = (m) =>
+        isGold(m) ? "&infin;" : (m?.sesiones_maximas ?? "—");
+      const goldClass = (m) => (isGold(m) ? " is-gold" : "");
+
+      const precioHtml =
+        membership && typeof membership.precio !== "undefined"
+          ? `<p><strong>Precio:</strong>
+               <span class="kp-chip">${formatPrice(membership.precio)}</span>
+             </p>`
+          : "";
+
       accountInfoDiv.innerHTML = `
         <div class="kp-account-head">
           <h1 class="kp-title">Mi cuenta</h1>
@@ -78,8 +107,13 @@ import { API_BASE_URL } from "../config";
           ${
             membership
               ? `
-                <p><strong>Membresía:</strong> <span class="kp-badge">${membership.titulo}</span></p>
-                <p><strong>Pacientes Activos:</strong> <span class="kp-chip">${pacientesActivos}/${membership.sesiones_maximas}</span></p>
+                <p><strong>Membresía:</strong>
+                  <span class="kp-badge${goldClass(membership)}">${membership.titulo}</span>
+                </p>
+                <p><strong>Pacientes Activos:</strong>
+                  <span class="kp-chip">${pacientesActivos}/${prettyMax(membership)}</span>
+                </p>
+                ${precioHtml}
               `
               : `<p class="kp-muted">No tienes membresías activas.</p>`
           }
@@ -92,15 +126,29 @@ import { API_BASE_URL } from "../config";
     );
 
     function createMembershipCard(m) {
+      const isTitleS = (m?.titulo || "").trim().toUpperCase() === "S";
+      const isMaxSentinel =
+        Number.isFinite(Number(m?.sesiones_maximas)) &&
+        Number(m.sesiones_maximas) >= 50000;
+      const gold = isTitleS || isMaxSentinel;
+
+      const maxText = gold ? "&infin;" : (m?.sesiones_maximas ?? "—");
+      const goldTitleClass = gold ? " is-gold" : "";
+      const goldBadgeClass = gold ? " is-gold" : "";
+
+      const priceText =
+        typeof m?.precio !== "undefined" ? formatPrice(m.precio) : "—";
+
       const card = document.createElement("article");
       card.className = "membership-card";
 
       card.innerHTML = `
         <header class="m-head">
-          <h3 class="m-title">${m.titulo}</h3>
-          <span class="m-badge">Máx. ${m.sesiones_maximas}</span>
+          <h3 class="m-title${goldTitleClass}">${m.titulo}</h3>
+          <span class="m-badge${goldBadgeClass}">Máx. ${maxText}</span>
         </header>
         <p class="m-desc">${m.observacion || "—"}</p>
+        <p class="m-price">Precio: <strong>${priceText}</strong></p>
       `;
       return card;
     }
@@ -285,6 +333,14 @@ import { API_BASE_URL } from "../config";
       margin: 6px 0 0;
       color: #0f172a;
     }
+    .m-price {
+      margin: 8px 0 0;
+      font-size: 14px;
+      color: var(--kp-ink-2);
+    }
+    .m-price strong {
+      font-weight: 800;
+    }
 
     /* ======= Botonera ======= */
     .button-container {
@@ -292,6 +348,19 @@ import { API_BASE_URL } from "../config";
       justify-content: center;
       margin: 16px auto 26px;
       max-width: 980px;
+    }
+
+    /* ======= Variantes doradas (no rompen estética) ======= */
+    .kp-badge.is-gold,
+    .m-badge.is-gold {
+      background: rgba(255, 189, 89, 0.18);
+      border-color: rgba(255, 189, 89, 0.55);
+      color: #8a5a00;
+      box-shadow: 0 0 0 1px rgba(255, 189, 89, 0.15) inset;
+    }
+    .m-title.is-gold {
+      color: #8a5a00;
+      text-shadow: 0 1px 0 rgba(255, 189, 89, 0.25);
     }
 
     /* Responsivo */

@@ -53,6 +53,20 @@ import { API_BASE_URL } from "../config";
             <label for="apellido">Apellido</label>
             <input type="text" id="apellido" name="apellido" required />
           </div>
+          <div class="input-group">
+            <label for="apellido">Email</label>
+            <input type="text" id="email" name="email" required />
+          </div>
+          <div class="input-group">
+            <label for="apellido">Nueva Contraseña</label>
+            <input
+              type="text"
+              id="clave"
+              name="clave"
+              placeholder="Dejar vacío para no cambiar"
+              required
+            />
+          </div>
         </div>
 
         <!-- Asignaciones -->
@@ -183,6 +197,8 @@ import { API_BASE_URL } from "../config";
           dni: $("#dni"),
           nombre: $("#nombre"),
           apellido: $("#apellido"),
+          email: $("#email"),
+          clave: $("#clave"),
         };
         var form = $("#editForm");
         var tbody = $("#assignmentsTbody");
@@ -243,7 +259,13 @@ import { API_BASE_URL } from "../config";
 
         function setLocked(locked) {
           state.locked = locked;
-          [inputs.dni, inputs.nombre, inputs.apellido].forEach(function (el) {
+          [
+            inputs.dni,
+            inputs.nombre,
+            inputs.apellido,
+            inputs.email,
+            inputs.clave,
+          ].forEach(function (el) {
             if (el) el.disabled = locked;
           });
           $$('input[data-assign]:not([data-assign="aplicacion"])').forEach(
@@ -533,6 +555,8 @@ import { API_BASE_URL } from "../config";
               dni: (p && p.dni) || dniParam,
               nombre: (p && p.nombre) || "",
               apellido: (p && p.apellido) || "",
+              email: (p && p.email) || "",
+              clave: (p && (p.clave || p.password)) || "",
             };
 
             // Asignaciones con stats
@@ -587,6 +611,8 @@ import { API_BASE_URL } from "../config";
             inputs.dni.value = state.paciente.dni;
             inputs.nombre.value = state.paciente.nombre;
             inputs.apellido.value = state.paciente.apellido;
+            inputs.email.value = state.paciente.email;
+            inputs.clave.value = state.paciente.clave;
 
             redrawAssignments();
             showBanner(
@@ -617,6 +643,7 @@ import { API_BASE_URL } from "../config";
             dni: (inputs.dni.value || "").trim(),
             nombre: (inputs.nombre.value || "").trim(),
             apellido: (inputs.apellido.value || "").trim(),
+            email: inputs.email.value.trim(),
           };
 
           var payload = {
@@ -634,6 +661,10 @@ import { API_BASE_URL } from "../config";
             }),
             id_usuario_medico: Number(sessionStorage.getItem("id")) || void 0,
           };
+
+          if (inputs.clave && inputs.clave.value.trim() !== "") {
+            payload.paciente.password = inputs.clave.value.trim();
+          }
 
           try {
             hideBanner();

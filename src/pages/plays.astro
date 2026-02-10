@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Chart from "chart.js/auto";
 import { API_BASE_URL } from "../config";
 ---
 
@@ -36,159 +35,251 @@ import { API_BASE_URL } from "../config";
 
     <!-- base URL para fetch -->
     <div id="cfg" data-api-base-url={API_BASE_URL}></div>
+
+    <!-- Chart.js (CDN) -->
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
     ></script>
 
-    <!-- Header (médico/paciente/observación) -->
+    <!-- Header (médico/paciente/observación) SIN TEMPLATE LITERALS -->
     <script client:load>
-      document.addEventListener("DOMContentLoaded", () => {
-        const idUsuario = sessionStorage.getItem("id");
-        const nombreUsuario = sessionStorage.getItem("nombre") || "";
-        const apellidoUsuario = sessionStorage.getItem("apellido") || "";
+      document.addEventListener("DOMContentLoaded", function () {
+        var idUsuario = sessionStorage.getItem("id");
+        var nombreUsuario = sessionStorage.getItem("nombre") || "";
+        var apellidoUsuario = sessionStorage.getItem("apellido") || "";
 
-        const nombrePaciente = localStorage.getItem("nombre_paciente") || "";
-        const apellidoPaciente =
-          localStorage.getItem("apellido_paciente") || "";
-        let observacion = localStorage.getItem("observacion_tipo") || "";
-        if (observacion.includes(".")) observacion = observacion.split(".")[0];
+        var nombrePaciente = localStorage.getItem("nombre_paciente") || "";
+        var apellidoPaciente = localStorage.getItem("apellido_paciente") || "";
+        var observacion = localStorage.getItem("observacion_tipo") || "";
+        if (observacion.indexOf(".") !== -1) {
+          observacion = observacion.split(".")[0];
+        }
 
-        const accountInfoDiv = document.getElementById("account-info");
+        var accountInfoDiv = document.getElementById("account-info");
+        accountInfoDiv.innerHTML = "";
+
         if (idUsuario) {
-          accountInfoDiv.innerHTML = `
-            <div>
-              <h1>${observacion || "Articulación"}</h1>
-              <h2>Médico: ${nombreUsuario} ${apellidoUsuario}</h2>
-              <h2>Paciente: ${nombrePaciente} ${apellidoPaciente}</h2>
-            </div>
-          `;
+          var wrap = document.createElement("div");
+
+          var h1 = document.createElement("h1");
+          h1.textContent = observacion ? observacion : "Articulación";
+          wrap.appendChild(h1);
+
+          var h2a = document.createElement("h2");
+          h2a.textContent = "Médico: " + nombreUsuario + " " + apellidoUsuario;
+          wrap.appendChild(h2a);
+
+          var h2p = document.createElement("h2");
+          h2p.textContent =
+            "Paciente: " + nombrePaciente + " " + apellidoPaciente;
+          wrap.appendChild(h2p);
+
+          accountInfoDiv.appendChild(wrap);
         } else {
-          accountInfoDiv.innerHTML = `<p>No has iniciado sesión.</p>`;
+          var p = document.createElement("p");
+          p.textContent = "No has iniciado sesión.";
+          accountInfoDiv.appendChild(p);
         }
       });
     </script>
 
-    <!-- Lógica principal -->
+    <!-- Lógica principal SIN TEMPLATE LITERALS -->
     <script type="module">
-      const API_BASE_URL = document.getElementById("cfg").dataset.apiBaseUrl;
+      (function () {
+        var API_BASE_URL = document.getElementById("cfg").dataset.apiBaseUrl;
 
-      // Helpers fetch con manejo de errores/JSON
-      async function req(path, options = {}) {
-        const res = await fetch(`${API_BASE_URL}${path}`, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(options.headers || {}),
-          },
-          ...options,
-        });
-        const ct = res.headers.get("content-type") || "";
-        const data = ct.includes("application/json")
-          ? await res.json().catch(() => ({}))
-          : await res.text().then((t) => ({
-              error: `Respuesta no JSON (${res.status})`,
-              raw: t,
-            }));
+        function req(path, options) {
+          if (!options) options = {};
+          var headers = options.headers || {};
+          headers["Content-Type"] = "application/json";
+          options.headers = headers;
 
-        if (!res.ok) {
-          const msg = data?.error || `HTTP ${res.status}`;
-          throw new Error(msg);
+          return fetch(API_BASE_URL + path, options).then(function (res) {
+            var ct = res.headers.get("content-type") || "";
+            var parse =
+              ct.indexOf("application/json") !== -1
+                ? res.json().catch(function () {
+                    return {};
+                  })
+                : res.text().then(function (t) {
+                    return {
+                      error: "Respuesta no JSON (" + res.status + ")",
+                      raw: t,
+                    };
+                  });
+
+            return parse.then(function (data) {
+              if (!res.ok) {
+                var msg =
+                  data && data.error ? data.error : "HTTP " + res.status;
+                throw new Error(msg);
+              }
+              return data;
+            });
+          });
         }
-        return data;
-      }
 
-      // Tiempo en HH:MM:SS
-      function fmtHMS(totalSeconds = 0) {
-        const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-        const hh = String(Math.floor(s / 3600)).padStart(2, "0");
-        const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-        const ss = String(s % 60).padStart(2, "0");
-        return `${hh}:${mm}:${ss}`;
-      }
-
-      // Trae juegos SOLO de ese paciente y de la app correcta
-      async function getJuegosByPaciente(idUsuarioPaciente, idAplicacion) {
-        const qs = new URLSearchParams({
-          id_usuario_paciente: String(idUsuarioPaciente),
-          id_aplicacion: String(idAplicacion),
-        });
-        return req(`/juegos.php?${qs.toString()}`);
-      }
-
-      async function getDatosJuego(id_juego, id_tipo) {
-        try {
-          return await req(
-            `/juego_datos.php?id_juego=${encodeURIComponent(id_juego)}&id_tipo=${encodeURIComponent(id_tipo)}`
-          );
-        } catch (e) {
-          const msg = String(e?.message || "");
-          if (
-            msg.includes("404") ||
-            msg.includes("Sin datos") ||
-            msg.includes("No hay")
-          ) {
-            return [];
-          }
-          console.warn(`getDatosJuego falló:`, e);
-          return [];
+        function fmtHMS(totalSeconds) {
+          var s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+          var hh = String(Math.floor(s / 3600)).padStart(2, "0");
+          var mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+          var ss = String(s % 60).padStart(2, "0");
+          return hh + ":" + mm + ":" + ss;
         }
-      }
 
-      // Métricas desde puntos (usando valores absolutos)
-      function calcularAmplitudesDesdePuntos(puntos) {
-        if (!Array.isArray(puntos) || puntos.length === 0)
-          return { media: 0, max: 0 };
-        const angulos = puntos
-          .map((p) => Number(p.angulo))
-          .filter((v) => Number.isFinite(v));
-        if (angulos.length === 0) return { media: 0, max: 0 };
+        function getJuegosByPaciente(idUsuarioPaciente, idAplicacion) {
+          var qs = new URLSearchParams({
+            id_usuario_paciente: String(idUsuarioPaciente),
+            id_aplicacion: String(idAplicacion),
+          });
+          return req("/juegos.php?" + qs.toString());
+        }
 
-        const absVals = angulos.map((v) => Math.abs(v));
-        const sumAbs = absVals.reduce((a, b) => a + b, 0);
-        const media = sumAbs / absVals.length;
-        const max = Math.max(...absVals);
-        return { media, max };
-      }
-
-      // Render de un juego con su gráfico
-      function renderJuego(index, juego, puntos) {
-        const cont = document.createElement("div");
-        cont.className = "juego-container";
-
-        const tieneAmplitudes =
-          Number.isFinite(Number(juego.amplitud_media)) &&
-          Number.isFinite(Number(juego.amplitud_maxima));
-
-        // ⚠️ pasar por Math.abs si vienen del backend
-        const calc = tieneAmplitudes
-          ? {
-              media: Math.abs(Number(juego.amplitud_media)),
-              max: Math.abs(Number(juego.amplitud_maxima)),
+        function getDatosJuego(id_juego, id_tipo) {
+          return req(
+            "/juego_datos.php?id_juego=" +
+              encodeURIComponent(id_juego) +
+              "&id_tipo=" +
+              encodeURIComponent(id_tipo)
+          ).catch(function (e) {
+            var msg = String((e && e.message) || "");
+            if (
+              msg.indexOf("404") !== -1 ||
+              msg.indexOf("Sin datos") !== -1 ||
+              msg.indexOf("No hay") !== -1
+            ) {
+              return [];
             }
-          : calcularAmplitudesDesdePuntos(puntos);
+            console.warn("getDatosJuego fallo:", e);
+            return [];
+          });
+        }
 
-        cont.innerHTML = `
-  <div class="juego-head">
-    <h2 class="kp-jugada-title">Jugada ${index + 1}</h2>
-  </div>
-  <div class="kp-jugada-meta">
-    <p><strong>Fecha:</strong> <span class="kp-value">${juego.fecha || "-"}</span></p>
-    <p><strong>Tiempo Jugado:</strong> <span class="kp-value">${Number(juego.tiempo_jugado ?? 0).toFixed(2)} s</span></p>
-    <p><strong>Puntaje:</strong> <span class="kp-value">${juego.puntaje ?? 0}</span></p>
-    <p><strong>Amplitud Máxima:</strong> <span class="kp-value">${(calc.max ?? 0).toFixed(2)}°</span></p>
-    <p><strong>Amplitud Media:</strong> <span class="kp-value">${(calc.media ?? 0).toFixed(2)}°</span></p>
-  </div>
-  <canvas id="juegoChart${index}" width="100%" height="30"></canvas>
-`;
+        // Config de filtros
+        var KP_FILTERS = {
+          hideNoData: true,
+          hideAllZero: true,
+          eps: 0.5,
+          minPoints: 10,
+        };
 
-        document.getElementById("graficosContainer")?.appendChild(cont);
+        function shouldKeepSession(puntos, calc, filters) {
+          var hideNoData = !!filters.hideNoData;
+          var hideAllZero = !!filters.hideAllZero;
+          var eps = Number(filters.eps) || 0;
+          var minPoints = Number(filters.minPoints) || 0;
 
-        if (Array.isArray(puntos) && puntos.length > 0) {
-          const tiempos = puntos.map((p) => p.tiempo);
-          const angulos = puntos.map((p) => p.angulo); // gráfico muestra valores reales
-          const canvas = document.getElementById(`juegoChart${index}`);
-          const ctx = canvas?.getContext("2d");
-          if (ctx) {
-            new Chart(ctx, {
+          if (hideNoData && (!puntos || puntos.length === 0)) return false;
+          if (
+            minPoints > 0 &&
+            puntos &&
+            puntos.length > 0 &&
+            puntos.length < minPoints
+          )
+            return false;
+
+          if (hideAllZero) {
+            if (puntos && puntos.length > 0) {
+              var hasSignal = false;
+              for (var i = 0; i < puntos.length; i++) {
+                var a = Math.abs(Number(puntos[i].angulo) || 0);
+                if (a >= eps) {
+                  hasSignal = true;
+                  break;
+                }
+              }
+              if (!hasSignal) return false;
+            } else {
+              var m = Math.abs(Number((calc && calc.max) || 0));
+              var me = Math.abs(Number((calc && calc.media) || 0));
+              if (m < eps && me < eps) return false;
+            }
+          }
+          return true;
+        }
+
+        function calcAmplitudesDesdePuntos(puntos) {
+          if (!puntos || !puntos.length) return { media: 0, max: 0 };
+          var sum = 0,
+            maxv = 0,
+            n = 0;
+          for (var i = 0; i < puntos.length; i++) {
+            var v = Math.abs(Number(puntos[i].angulo) || 0);
+            if (isFinite(v)) {
+              sum += v;
+              if (v > maxv) maxv = v;
+              n++;
+            }
+          }
+          return n ? { media: sum / n, max: maxv } : { media: 0, max: 0 };
+        }
+
+        function el(tag, text) {
+          var e = document.createElement(tag);
+          if (text != null) e.textContent = String(text);
+          return e;
+        }
+
+        function renderJuego(idx, juego, puntos, calc) {
+          var cont = el("div");
+          cont.className = "juego-container";
+
+          var head = el("div");
+          head.className = "juego-head";
+          var h2 = el("h2", "Jugada " + (idx + 1));
+          h2.className = "kp-jugada-title";
+          head.appendChild(h2);
+
+          var meta = el("div");
+          meta.className = "kp-jugada-meta";
+
+          function row(label, value) {
+            var p = el("p");
+            var b = el("strong", label + ":");
+            var span = el("span", value);
+            span.className = "kp-value";
+            p.appendChild(b);
+            p.appendChild(document.createTextNode(" "));
+            p.appendChild(span);
+            return p;
+          }
+
+          meta.appendChild(row("Fecha", juego.fecha || "-"));
+          meta.appendChild(
+            row(
+              "Tiempo Jugado",
+              Number(juego.tiempo_jugado || 0).toFixed(2) + " s"
+            )
+          );
+          meta.appendChild(row("Puntaje", juego.puntaje || 0));
+          meta.appendChild(
+            row("Amplitud Máxima", (calc.max || 0).toFixed(2) + "°")
+          );
+          meta.appendChild(
+            row("Amplitud Media", (calc.media || 0).toFixed(2) + "°")
+          );
+
+          var canvas = el("canvas");
+          canvas.id = "juegoChart" + idx;
+          canvas.width = 100;
+          canvas.height = 30;
+
+          cont.appendChild(head);
+          cont.appendChild(meta);
+          cont.appendChild(canvas);
+
+          var wrapper = document.getElementById("graficosContainer");
+          if (wrapper) wrapper.appendChild(cont);
+
+          if (puntos && puntos.length) {
+            var tiempos = [];
+            var angulos = [];
+            for (var i = 0; i < puntos.length; i++) {
+              tiempos.push(puntos[i].tiempo);
+              angulos.push(puntos[i].angulo);
+            }
+            var ctx = canvas.getContext("2d");
+            new window.Chart(ctx, {
               type: "line",
               data: {
                 labels: tiempos,
@@ -196,7 +287,7 @@ import { API_BASE_URL } from "../config";
                   {
                     label: "Ángulo",
                     data: angulos,
-                    borderColor: "rgba(60, 150, 255, 0.8)",
+                    borderColor: "rgba(60,150,255,0.8)",
                     borderWidth: 2,
                     fill: false,
                   },
@@ -224,244 +315,246 @@ import { API_BASE_URL } from "../config";
             });
           }
         }
-        return calc;
-      }
 
-      // Main
-      async function main() {
-        // Tomar id_usuario_paciente + id_tipo desde el click en "pacients"
-        const idUsuarioPaciente = Number(
-          localStorage.getItem("id_usuario_paciente") || 0
-        );
-        const idTipo = Number(localStorage.getItem("id_tipo") || 0);
-
-        if (!idUsuarioPaciente || !idTipo) {
-          console.error("Faltan id_usuario_paciente o id_tipo en localStorage");
-          document.getElementById("graficosContainer").innerHTML =
-            '<p style="color:#b00020">No se pudieron cargar las jugadas (falta información del paciente o articulación).</p>';
-          return;
+        function buildLineChart(
+          canvasId,
+          labels,
+          dataArr,
+          label,
+          bg,
+          border,
+          yTitle
+        ) {
+          var canvas = document.getElementById(canvasId);
+          if (!canvas) return;
+          var ctx = canvas.getContext("2d");
+          new window.Chart(ctx, {
+            type: "line",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: label,
+                  data: dataArr,
+                  backgroundColor: bg,
+                  borderColor: border,
+                  borderWidth: 3,
+                  pointRadius: 4,
+                  pointHoverRadius: 6,
+                  pointBorderWidth: 2,
+                  fill: false,
+                  tension: 0.2,
+                },
+              ],
+            },
+            options: {
+              plugins: {
+                legend: {
+                  labels: {
+                    color: "#2c3e50",
+                    font: { size: 14, weight: "600" },
+                  },
+                },
+                tooltip: {
+                  titleFont: { size: 14, weight: "700" },
+                  bodyFont: { size: 13 },
+                },
+              },
+              scales: {
+                x: {
+                  title: {
+                    display: true,
+                    text: "Número de Jugada",
+                    color: "#2c3e50",
+                    font: { size: 14, weight: "700" },
+                  },
+                  ticks: {
+                    color: "#2c3e50",
+                    font: { size: 13, weight: "600" },
+                  },
+                  grid: { lineWidth: 1 },
+                },
+                y: {
+                  title: {
+                    display: true,
+                    text: yTitle,
+                    color: "#2c3e50",
+                    font: { size: 14, weight: "700" },
+                  },
+                  ticks: {
+                    color: "#2c3e50",
+                    font: { size: 13, weight: "600" },
+                  },
+                  grid: { lineWidth: 1 },
+                },
+              },
+            },
+          });
         }
 
-        // Mapear id_tipo -> id_aplicacion
-        const idAplicacion = idTipo === 22 ? 1 : 2;
+        function main() {
+          var idUsuarioPaciente = Number(
+            localStorage.getItem("id_usuario_paciente") || 0
+          );
+          var idTipo = Number(localStorage.getItem("id_tipo") || 0);
 
-        // Traer juegos del paciente (filtrados por app correcta)
-        let juegos = [];
-        try {
-          juegos = await getJuegosByPaciente(idUsuarioPaciente, idAplicacion);
-          if (!Array.isArray(juegos))
-            throw new Error("Respuesta inesperada de juegos.php");
-        } catch (e) {
-          console.error("Error trayendo juegos:", e);
-          document.getElementById("graficosContainer").innerHTML =
-            '<p style="color:#b00020">No se pudieron cargar las jugadas.</p>';
-          return;
-        }
-
-        if (juegos.length === 0) {
-          document.getElementById("graficosContainer").innerHTML =
-            "<p>El paciente no tiene jugadas en esta articulación.</p>";
-          // Limpiar métricas globales
-          document.getElementById("cantidadJuegos").textContent = "0";
-          document.getElementById("amplitudPromedioTotal").textContent = "0.00";
-          document.getElementById("amplitudMaximaPromedio").textContent =
-            "0.00";
-          document.getElementById("tiempoJugadoTotal").textContent = "00:00:00";
-          return;
-        }
-
-        // Tiempo total jugado (sumatoria de la app/“articulación”)
-        const totalSeg = juegos.reduce(
-          (acc, j) => acc + Number(j?.tiempo_jugado || 0),
-          0
-        );
-        document.getElementById("tiempoJugadoTotal").textContent =
-          fmtHMS(totalSeg);
-
-        // Por cada juego, traer sus puntos de ese id_tipo
-        let sumaMedia = 0;
-        let sumaMax = 0;
-        const medias = [];
-        const maximas = [];
-        const labels = [];
-
-        const gc = document.getElementById("graficosContainer");
-        gc.innerHTML = "";
-
-        for (let i = 0; i < juegos.length; i++) {
-          const j = juegos[i];
-          labels.push(`Jugada ${i + 1}`);
-
-          let puntos = [];
-          try {
-            puntos = await getDatosJuego(j.id_juego, idTipo);
-          } catch (e) {
-            console.warn(
-              `Sin datos para id_juego=${j.id_juego}, id_tipo=${idTipo}`,
-              e
+          if (!idUsuarioPaciente || !idTipo) {
+            console.error(
+              "Faltan id_usuario_paciente o id_tipo en localStorage"
             );
+            var gc = document.getElementById("graficosContainer");
+            if (gc)
+              gc.innerHTML =
+                "<p style='color:#b00020'>No se pudieron cargar las jugadas (falta información del paciente o articulación).</p>";
+            var tj = document.getElementById("tiempoJugadoTotal");
+            if (tj) tj.textContent = "00:00:00";
+            return;
           }
 
-          const met = renderJuego(i, j, puntos);
-          medias.push(Number((met.media ?? 0).toFixed(2)));
-          maximas.push(Number((met.max ?? 0).toFixed(2)));
-          sumaMedia += met.media ?? 0;
-          sumaMax += met.max ?? 0;
+          var idAplicacion = idTipo === 22 ? 1 : 2;
+
+          getJuegosByPaciente(idUsuarioPaciente, idAplicacion)
+            .then(function (juegos) {
+              if (!Array.isArray(juegos))
+                throw new Error("Respuesta inesperada de juegos.php");
+
+              if (juegos.length === 0) {
+                var gc = document.getElementById("graficosContainer");
+                if (gc)
+                  gc.innerHTML =
+                    "<p>El paciente no tiene jugadas en esta articulación.</p>";
+                document.getElementById("cantidadJuegos").textContent = "0";
+                document.getElementById("amplitudPromedioTotal").textContent =
+                  "0.00";
+                document.getElementById("amplitudMaximaPromedio").textContent =
+                  "0.00";
+                document.getElementById("tiempoJugadoTotal").textContent =
+                  "00:00:00";
+                return;
+              }
+
+              var labels = [];
+              var medias = [];
+              var maximas = [];
+              var sumaMedia = 0;
+              var sumaMax = 0;
+              var totalSeg = 0;
+              var visibles = [];
+
+              var gc = document.getElementById("graficosContainer");
+              if (gc) gc.innerHTML = "";
+
+              // Secuencia: pedir datos por juego en cadena (para mantener orden)
+              var chain = Promise.resolve();
+              juegos.forEach(function (jg, idx) {
+                chain = chain.then(function () {
+                  return getDatosJuego(jg.id_juego, idTipo).then(
+                    function (puntos) {
+                      var calc;
+                      var hasBackendAmps =
+                        isFinite(Number(jg.amplitud_media)) &&
+                        isFinite(Number(jg.amplitud_maxima));
+                      if (hasBackendAmps) {
+                        calc = {
+                          media: Math.abs(Number(jg.amplitud_media)),
+                          max: Math.abs(Number(jg.amplitud_maxima)),
+                        };
+                      } else {
+                        calc = calcAmplitudesDesdePuntos(puntos);
+                      }
+
+                      if (!shouldKeepSession(puntos, calc, KP_FILTERS)) return;
+
+                      visibles.push({ juego: jg, puntos: puntos, calc: calc });
+                      labels.push("Jugada " + visibles.length);
+                      medias.push(Number((calc.media || 0).toFixed(2)));
+                      maximas.push(Number((calc.max || 0).toFixed(2)));
+                      sumaMedia += calc.media || 0;
+                      sumaMax += calc.max || 0;
+                      totalSeg += Number(jg.tiempo_jugado || 0);
+                    }
+                  );
+                });
+              });
+
+              chain
+                .then(function () {
+                  // Render individuales
+                  for (var k = 0; k < visibles.length; k++) {
+                    renderJuego(
+                      k,
+                      visibles[k].juego,
+                      visibles[k].puntos,
+                      visibles[k].calc
+                    );
+                  }
+
+                  // KPIs globales
+                  document.getElementById("cantidadJuegos").textContent =
+                    String(visibles.length);
+                  var n = visibles.length || 1;
+                  var promMedia = sumaMedia / n;
+                  var promMax = sumaMax / n;
+                  document.getElementById("amplitudPromedioTotal").textContent =
+                    promMedia.toFixed(2) + "°";
+                  document.getElementById(
+                    "amplitudMaximaPromedio"
+                  ).textContent = promMax.toFixed(2) + "°";
+                  document.getElementById("tiempoJugadoTotal").textContent =
+                    fmtHMS(totalSeg);
+
+                  // Charts globales
+                  buildLineChart(
+                    "amplitudMediaChart",
+                    labels,
+                    medias,
+                    "Amplitud Media",
+                    "rgba(230,160,60,1)",
+                    "rgba(255,189,89,1)",
+                    "Amplitud Media (°)"
+                  );
+                  buildLineChart(
+                    "amplitudMaximaChart",
+                    labels,
+                    maximas,
+                    "Amplitud Máxima",
+                    "rgba(200,60,50,1)",
+                    "rgba(230,80,70,1)",
+                    "Amplitud Máxima (°)"
+                  );
+                })
+                .catch(function (e) {
+                  console.error(e);
+                  var gc2 = document.getElementById("graficosContainer");
+                  if (gc2)
+                    gc2.innerHTML =
+                      "<p style='color:#b00020'>No se pudieron procesar las jugadas.</p>";
+                  document.getElementById("tiempoJugadoTotal").textContent =
+                    "00:00:00";
+                });
+            })
+            .catch(function (e) {
+              console.error("Error trayendo juegos:", e);
+              var gc = document.getElementById("graficosContainer");
+              if (gc)
+                gc.innerHTML =
+                  "<p style='color:#b00020'>No se pudieron cargar las jugadas.</p>";
+              document.getElementById("tiempoJugadoTotal").textContent =
+                "00:00:00";
+            });
         }
 
-        // Métricas globales + charts (ya con absolutos)
-        const n = juegos.length || 1;
-        const promMedia = sumaMedia / n;
-        const promMax = sumaMax / n;
-        document.getElementById("cantidadJuegos").textContent = String(
-          juegos.length
-        );
-        document.getElementById("amplitudPromedioTotal").textContent =
-          `${promMedia.toFixed(2)}°`;
-        document.getElementById("amplitudMaximaPromedio").textContent =
-          `${promMax.toFixed(2)}°`;
-        const mediaCanvas = document.getElementById("amplitudMediaChart");
-        const mediaCtx = mediaCanvas?.getContext("2d");
-        if (mediaCtx) {
-          new Chart(mediaCtx, {
-            type: "line",
-            data: {
-              labels,
-              datasets: [
-                {
-                  label: "Amplitud Media",
-                  data: medias,
-                  backgroundColor: "rgba(230,160,60,1)",
-                  borderColor: "rgba(255,189,89,1)",
-                  borderWidth: 3, // ⬅︎ línea más gruesa
-                  pointRadius: 4, // ⬅︎ puntos más grandes
-                  pointHoverRadius: 6,
-                  pointBorderWidth: 2,
-                  fill: false,
-                  tension: 0.2,
-                },
-              ],
-            },
-            options: {
-              plugins: {
-                legend: {
-                  labels: {
-                    color: "#2c3e50",
-                    font: { size: 14, weight: "600" }, // ⬅︎ texto de la leyenda
-                  },
-                },
-                tooltip: {
-                  titleFont: { size: 14, weight: "700" },
-                  bodyFont: { size: 13 },
-                },
-              },
-              scales: {
-                x: {
-                  title: {
-                    display: true,
-                    text: "Número de Jugada",
-                    color: "#2c3e50",
-                    font: { size: 14, weight: "700" }, // ⬅︎ título eje X
-                  },
-                  ticks: {
-                    color: "#2c3e50",
-                    font: { size: 13, weight: "600" }, // ⬅︎ etiquetas eje X
-                  },
-                  grid: { lineWidth: 1 },
-                },
-                y: {
-                  title: {
-                    display: true,
-                    text: "Amplitud Media (°)",
-                    color: "#2c3e50",
-                    font: { size: 14, weight: "700" }, // ⬅︎ título eje Y
-                  },
-                  ticks: {
-                    color: "#2c3e50",
-                    font: { size: 13, weight: "600" }, // ⬅︎ etiquetas eje Y
-                  },
-                  grid: { lineWidth: 1 },
-                },
-              },
-            },
-          });
+        try {
+          main();
+        } catch (e) {
+          console.error(e);
+          var gc = document.getElementById("graficosContainer");
+          if (gc)
+            gc.innerHTML =
+              "<p style='color:#b00020'>No se pudieron cargar las jugadas.</p>";
+          document.getElementById("tiempoJugadoTotal").textContent = "00:00:00";
         }
-
-        const maxCanvas = document.getElementById("amplitudMaximaChart");
-        const maxCtx = maxCanvas?.getContext("2d");
-        if (maxCtx) {
-          new Chart(maxCtx, {
-            type: "line",
-            data: {
-              labels,
-              datasets: [
-                {
-                  label: "Amplitud Máxima",
-                  data: maximas,
-                  backgroundColor: "rgba(200,60,50,1)",
-                  borderColor: "rgba(230,80,70,1)",
-                  borderWidth: 3, // ⬅︎ línea más gruesa
-                  pointRadius: 4, // ⬅︎ puntos más grandes
-                  pointHoverRadius: 6,
-                  pointBorderWidth: 2,
-                  fill: false,
-                  tension: 0.2,
-                },
-              ],
-            },
-            options: {
-              plugins: {
-                legend: {
-                  labels: {
-                    color: "#2c3e50",
-                    font: { size: 14, weight: "600" }, // ⬅︎ texto de la leyenda
-                  },
-                },
-                tooltip: {
-                  titleFont: { size: 14, weight: "700" },
-                  bodyFont: { size: 13 },
-                },
-              },
-              scales: {
-                x: {
-                  title: {
-                    display: true,
-                    text: "Número de Jugada",
-                    color: "#2c3e50",
-                    font: { size: 14, weight: "700" }, // ⬅︎ título eje X
-                  },
-                  ticks: {
-                    color: "#2c3e50",
-                    font: { size: 13, weight: "600" }, // ⬅︎ etiquetas eje X
-                  },
-                  grid: { lineWidth: 1 },
-                },
-                y: {
-                  title: {
-                    display: true,
-                    text: "Amplitud Máxima (°)",
-                    color: "#2c3e50",
-                    font: { size: 14, weight: "700" }, // ⬅︎ título eje Y
-                  },
-                  ticks: {
-                    color: "#2c3e50",
-                    font: { size: 13, weight: "600" }, // ⬅︎ etiquetas eje Y
-                  },
-                  grid: { lineWidth: 1 },
-                },
-              },
-            },
-          });
-        }
-      }
-
-      // arrancar
-      main().catch((e) => {
-        console.error(e);
-        document.getElementById("graficosContainer").innerHTML =
-          '<p style="color:#b00020">No se pudieron cargar las jugadas.</p>';
-        document.getElementById("tiempoJugadoTotal").textContent = "00:00:00";
-      });
+      })();
     </script>
   </div>
 </Layout>
@@ -478,7 +571,7 @@ import { API_BASE_URL } from "../config";
     font-weight: 800;
     font-size: clamp(22px, 3.2vw, 36px);
     line-height: 1.12;
-    color: #0f172a; /* texto principal */
+    color: #0f172a;
     letter-spacing: 0.2px;
     position: relative;
   }
@@ -497,7 +590,7 @@ import { API_BASE_URL } from "../config";
     margin: 6px 0 0;
     font-weight: 700;
     font-size: clamp(14px, 1.8vw, 18px);
-    color: #0b5f7a; /* azul KinePlay oscuro */
+    color: #0b5f7a;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -508,7 +601,7 @@ import { API_BASE_URL } from "../config";
     height: 8px;
     border-radius: 50%;
     background: #03a1cf;
-    box-shadow: 12px 0 0 #ffbd59; /* duotono */
+    box-shadow: 12px 0 0 #ffbd59;
   }
 
   /* =============================
@@ -540,7 +633,6 @@ import { API_BASE_URL } from "../config";
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
   }
 
-  /* Título de jugada con barra degradada a la izquierda */
   .kp-jugada-title {
     position: relative;
     margin: 0 0 8px;
@@ -563,7 +655,6 @@ import { API_BASE_URL } from "../config";
     opacity: 0.9;
   }
 
-  /* Bloque de metadatos */
   .kp-jugada-meta {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -577,7 +668,6 @@ import { API_BASE_URL } from "../config";
     font-weight: 800;
   }
 
-  /* Chip para cada valor */
   .kp-value {
     display: inline-block;
     padding: 2px 8px;
@@ -588,7 +678,6 @@ import { API_BASE_URL } from "../config";
     font-weight: 700;
   }
 
-  /* Un poco de feedback visual al pasar por una jugada */
   .juego-container:hover {
     box-shadow: 0 10px 24px rgba(3, 161, 207, 0.08);
     transform: translateY(-1px);
@@ -597,7 +686,6 @@ import { API_BASE_URL } from "../config";
       box-shadow 0.18s ease;
   }
 
-  /* Respeto por reducción de movimiento */
   @media (prefers-reduced-motion: reduce) {
     .juego-container {
       transition: none !important;
