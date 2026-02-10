@@ -1,266 +1,796 @@
 ---
 import Button from "../components/Button.astro";
-import LoginLayout from "../layouts/LoginLayout.astro";
 import Layout from "../layouts/Layout.astro";
 import ButtonOldCopy from "../components/ButtonOldCopy.astro";
-
-interface Props {
-  title: string;
-}
-const { title } = Astro.props;
+import { API_BASE_URL } from "../config";
 ---
 
-<Layout title="loginLayout">
+<Layout title="CrearPaciente">
   <body>
     <div class="login-container">
       <h2>Crear Paciente</h2>
-      <form id="registerForm" onsubmit="handleRegister(event)">
+
+      <form id="registerForm">
         <div class="input-group">
-          <div class="input-group">
-            <label for="nombre">Nombre</label>
-            <input type="text" id="nombre" name="nombre" required />
-          </div>
-          <div class="input-group">
-            <label for="apellido">Apellido</label>
-            <input type="text" id="apellido" name="apellido" required />
-          </div>
-          <div class="input-group">
-            <label for="dni">DNI</label>
-            <input type="number" id="dni" name="dni" required />
-          </div>
+          <label for="nombre">Nombre</label>
+          <input type="text" id="nombre" name="nombre" required />
+        </div>
 
-          <div class="input-group">
-            <label for="clave">Contraseña</label>
-            <input type="password" id="clave" name="password" required />
-          </div>
-          <div class="checkbox-group">
-            <label style="padding-inline: 20px;"
-              >Space Evation
-              <input
-                type="checkbox"
-                id="spaceEvation"
-                name="spaceEvation"
-                value="1"
-              />
+        <div class="input-group">
+          <label for="apellido">Apellido</label>
+          <input type="text" id="apellido" name="apellido" required />
+        </div>
+
+        <div class="input-group">
+          <label for="dni">DNI</label>
+          <input type="text" id="dni" name="dni" required />
+        </div>
+
+        <!-- Email -->
+        <div class="input-group">
+          <label for="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="paciente_12345678@kineplay.local"
+            required
+          />
+        </div>
+
+        <div class="input-group">
+          <label for="clave">Contraseña</label>
+          <input type="password" id="clave" name="password" required />
+        </div>
+
+        <!-- Selección por aplicación + tiempo mínimo individual + dificultad -->
+        <fieldset class="apps-fieldset">
+          <legend>Asignaciones, tiempo mínimo y dificultad</legend>
+
+          <!-- App 1 -->
+          <div class="app-row">
+            <label class="app-check">
+              <input type="checkbox" id="app1" value="1" />
+              <span>Space Evation</span>
+
+              <!-- INFO: botón que abre modal -->
+              <button
+                type="button"
+                class="info-btn"
+                aria-label="Información de Space Evation"
+                data-title="Space Evation"
+                data-body="Juego de nave espacial para trabajar la flexión y extensión de muñeca. La dificultad varía de 1 a 5: La dificultad 1 es para pacientes con 10° o menos de flexión y extensión, 2 para 30° o menos, 3 para 50° o menos, 4 para 70° o menos y 5 para 90° o menos."
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    fill="none"
+                    stroke-width="2"></circle>
+                  <line
+                    x1="12"
+                    y1="10"
+                    x2="12"
+                    y2="16"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"></line>
+                  <circle cx="12" cy="7" r="1.6" fill="currentColor"></circle>
+                </svg>
+              </button>
             </label>
 
-            <label
-              >Platform Jump
+            <div class="app-controls">
+              <label class="mini-label" for="minApp1">Tiempo Min.</label>
               <input
-                type="checkbox"
-                id="platformJump"
-                name="platformJump"
-                value="2"
+                type="number"
+                id="minApp1"
+                class="min-input"
+                min="1"
+                max="120"
+                placeholder="10"
+                disabled
               />
+              <label class="mini-label" for="difApp1">Dificultad</label>
+              <select id="difApp1" class="dif-select" disabled>
+                <option value="1">Dif 1</option>
+                <option value="2">Dif 2</option>
+                <option value="3">Dif 3</option>
+                <option value="4">Dif 4</option>
+                <option value="5">Dif 5</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- App 2 -->
+          <div class="app-row">
+            <label class="app-check">
+              <input type="checkbox" id="app2" value="2" />
+              <span>Platform Jump</span>
+
+              <!-- INFO: botón que abre modal -->
+              <button
+                type="button"
+                class="info-btn"
+                aria-label="Información de Platform Jump"
+                data-title="Platform Jump"
+                data-body="Juego de correr y saltar para trabajar la flexion y extension de los dedos. La dificultad va de 1 a 3. La dificultad 1 es para pacientes con 20° o menos de flexión de los dedos, 2 es para 60° o menos y 3 es para lo que pueden cerrar la mano por completo."
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    fill="none"
+                    stroke-width="2"></circle>
+                  <line
+                    x1="12"
+                    y1="10"
+                    x2="12"
+                    y2="16"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"></line>
+                  <circle cx="12" cy="7" r="1.6" fill="currentColor"></circle>
+                </svg>
+              </button>
             </label>
+
+            <div class="app-controls">
+              <label class="mini-label" for="minApp2">Tiempo Min.</label>
+              <input
+                type="number"
+                id="minApp2"
+                class="min-input"
+                min="1"
+                max="120"
+                placeholder="10"
+                disabled
+              />
+              <label class="mini-label" for="difApp2">Dificultad</label>
+              <select id="difApp2" class="dif-select" disabled>
+                <option value="1">Dif 1</option>
+                <option value="2">Dif 2</option>
+                <option value="3">Dif 3</option>
+              </select>
+            </div>
           </div>
-          <div class="button-container">
-            <Button title="Crear" body="" imageSrc="" color="#FFBD59" />
-            <ButtonOldCopy
-              href="pacients"
-              title="Volver"
-              body=""
-              imageSrc=""
-              color="#03A1CF"
-            />
-          </div>
+        </fieldset>
+
+        <div class="button-container">
+          <Button title="Crear" body="" imageSrc="" color="#FFBD59" />
+          <ButtonOldCopy
+            href="pacients"
+            title="Volver"
+            body=""
+            imageSrc=""
+            color="#03A1CF"
+          />
         </div>
       </form>
 
+      <div id="cfg" data-api-base-url={API_BASE_URL}></div>
+
+      <!-- ===== MODAL GLOBAL DE INFO ===== -->
+      <div id="infoModal" class="kp-modal" aria-hidden="true">
+        <div class="kp-modal__backdrop" data-close="true"></div>
+        <div
+          class="kp-modal__dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="kpModalTitle"
+          aria-describedby="kpModalBody"
+        >
+          <button
+            class="kp-modal__close"
+            type="button"
+            aria-label="Cerrar"
+            data-close="true">✕</button
+          >
+          <h3 id="kpModalTitle" class="kp-modal__title">Título</h3>
+          <div id="kpModalBody" class="kp-modal__body">Texto de ejemplo.</div>
+          <div class="kp-modal__actions">
+            <button class="kp-modal__ok" type="button" data-close="true"
+              >Entendido</button
+            >
+          </div>
+        </div>
+      </div>
+
       <script client:load>
-        async function handleRegister(event) {
-          event.preventDefault(); // Evitar que se recargue la página
+        // ===== Helpers =====
+        var $ = function (s, root) {
+          return (root || document).querySelector(s);
+        };
 
-          // Obtener los valores del formulario
-          const nombre = document.getElementById("nombre").value;
-          const apellido = document.getElementById("apellido").value;
-          const dni = document.getElementById("dni").value;
-          const clave = document.getElementById("clave").value;
-
-          // Verificar si los checkboxes están marcados
-          const aplicaciones = [];
-          const spaceEvation = document.getElementById("spaceEvation");
-          const platformJump = document.getElementById("platformJump");
-
-          if (!spaceEvation.checked && !platformJump.checked) {
-            alert(
-              "Debes seleccionar al menos una opción (Space Evation o Platform Jump)."
-            );
-            return;
+        // Habilitar/deshabilitar inputs de minutos y dificultad según checkbox
+        var pairs = [
+          { chk: "app1", mins: "minApp1", dif: "difApp1" },
+          { chk: "app2", mins: "minApp2", dif: "difApp2" },
+        ];
+        pairs.forEach(function (ref) {
+          var c = document.getElementById(ref.chk);
+          var i = document.getElementById(ref.mins);
+          var d = document.getElementById(ref.dif);
+          if (c) {
+            c.addEventListener("change", function () {
+              var on = c.checked;
+              if (i) i.disabled = !on;
+              if (d) d.disabled = !on;
+            });
           }
+        });
 
-          // Agregar los valores seleccionados al array
-          if (spaceEvation.checked) aplicaciones.push(spaceEvation.value);
-          if (platformJump.checked) aplicaciones.push(platformJump.value);
-
-          const id_usuario = sessionStorage.getItem("id");
-
-          // Crear objeto con los datos del paciente
-          const pacientData = {
-            nombre: nombre,
-            apellido: apellido,
-            dni: dni,
-            clave: clave,
-            id_usuario: id_usuario,
-            id_aplicaciones: aplicaciones, // Aquí se asignan las aplicaciones seleccionadas
-          };
-
-          try {
-            // Enviar la solicitud POST al backend
-            const response = await fetch(
-              "http://ec2-34-202-72-75.compute-1.amazonaws.com/phpmyadmin/pacientes.php?create=true",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(pacientData),
-              }
-            );
-
-            // Manejar la respuesta
-            if (response.ok) {
-              alert("Paciente creado exitosamente.");
-              window.location.href = "/pacients"; // Redirigir a la página de pacientes
-            } else {
-              const errorData = await response.json();
-              alert(errorData.error || "Error al crear el paciente.");
-            }
-          } catch (error) {
-            console.error("Error en la solicitud:", error);
-            alert("Hubo un problema con la solicitud. Intente de nuevo.");
+        // Autogenerar email si está vacío cuando se tipea el DNI
+        var dniEl = document.getElementById("dni");
+        var emailEl = document.getElementById("email");
+        function sugerirEmail() {
+          var d = (dniEl && dniEl.value ? dniEl.value : "").trim();
+          if (emailEl && !emailEl.value.trim() && d) {
+            emailEl.value = "paciente_" + d + "@kineplay.local";
           }
         }
+        if (dniEl) {
+          dniEl.addEventListener("input", sugerirEmail);
+          dniEl.addEventListener("blur", sugerirEmail);
+        }
+
+        var creating = false;
+
+        async function handleRegister(event) {
+          if (event) event.preventDefault();
+
+          if (creating) return;
+          creating = true;
+
+          try {
+            var nombre = (document.getElementById("nombre").value || "").trim();
+            var apellido = (
+              document.getElementById("apellido").value || ""
+            ).trim();
+            var dni = (document.getElementById("dni").value || "").trim();
+            var emailIn = (document.getElementById("email").value || "")
+              .trim()
+              .toLowerCase();
+            var clave = document.getElementById("clave").value;
+            var id_medico = Number(sessionStorage.getItem("id"));
+
+            if (!id_medico) {
+              alert("Sesión inválida. Volvé a iniciar sesión.");
+              creating = false;
+              return;
+            }
+
+            // apps seleccionadas + minutos + dificultades
+            var seleccionadas = [];
+            var tiempos_minimos = {}; // { "1": seg, "2": seg }
+            var dificultades = {}; // { "1": 1..5, "2": 1..3 }
+
+            var app1 = document.getElementById("app1").checked;
+            var app2 = document.getElementById("app2").checked;
+
+            if (!app1 && !app2) {
+              alert("Seleccioná al menos una aplicación.");
+              creating = false;
+              return;
+            }
+
+            if (app1) {
+              seleccionadas.push(1);
+              var m1 = document.getElementById("minApp1").value;
+              var min1 =
+                m1 === "" ? 10 : Math.max(1, Math.min(120, parseInt(m1, 10)));
+              tiempos_minimos["1"] = min1 * 60;
+              var dif1 = parseInt(document.getElementById("difApp1").value, 10);
+              dificultades["1"] = isNaN(dif1) ? 1 : dif1;
+            }
+            if (app2) {
+              seleccionadas.push(2);
+              var m2 = document.getElementById("minApp2").value;
+              var min2 =
+                m2 === "" ? 10 : Math.max(1, Math.min(120, parseInt(m2, 10)));
+              tiempos_minimos["2"] = min2 * 60;
+              var dif2 = parseInt(document.getElementById("difApp2").value, 10);
+              dificultades["2"] = isNaN(dif2) ? 1 : dif2;
+            }
+
+            var email = emailIn;
+
+            var payload = {
+              nombre: nombre,
+              apellido: apellido,
+              dni: dni,
+              email: email,
+              password: clave,
+              id_usuario: id_medico, // médico que crea
+              id_aplicaciones: seleccionadas,
+              tiempos_minimos: tiempos_minimos,
+              dificultades: dificultades,
+            };
+
+            var base = document.getElementById("cfg").dataset.apiBaseUrl;
+
+            var res = await fetch(base + "/pacientes.php?create=true", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+
+            var ct = res.headers.get("content-type") || "";
+            var data =
+              ct.indexOf("application/json") !== -1
+                ? await res.json()
+                : await res.text();
+
+            if (!res.ok) {
+              console.error("Error creación:", data);
+              alert((data && data.error) || "Error al crear el paciente.");
+              creating = false;
+              return;
+            }
+
+            alert("Paciente y asignaciones creadas correctamente.");
+            window.location.href = "/pacients";
+          } catch (e) {
+            console.error(e);
+            alert("No se pudo contactar al servidor.");
+            creating = false;
+          }
+        }
+
+        // Enlazar submit del formulario
+        var form = document.getElementById("registerForm");
+        if (form) {
+          form.addEventListener("submit", handleRegister);
+        }
+
+        // Forzar tipo submit en el botón compuesto y disparar submit
+        var crearBtn = document.querySelector(
+          ".button-container button.link-card, .button-container button"
+        );
+        if (crearBtn) {
+          crearBtn.type = "submit";
+          crearBtn.addEventListener("click", function () {
+            if (form && typeof form.requestSubmit === "function")
+              form.requestSubmit();
+          });
+        }
+
+        // ===== MODAL: abrir/cerrar =====
+        (function initInfoModal() {
+          var modal = document.getElementById("infoModal");
+          var titleEl = document.getElementById("kpModalTitle");
+          var bodyEl = document.getElementById("kpModalBody");
+          var lastTrigger = null;
+
+          function openModal(title, body, trigger) {
+            lastTrigger = trigger || null;
+            titleEl.textContent = title || "Información";
+            bodyEl.textContent = body || "";
+            modal.classList.add("is-open");
+            modal.setAttribute("aria-hidden", "false");
+            // bloquear scroll de fondo
+            document.documentElement.style.overflow = "hidden";
+            // foco accesible
+            modal.querySelector(".kp-modal__close").focus();
+          }
+
+          function closeModal() {
+            modal.classList.remove("is-open");
+            modal.setAttribute("aria-hidden", "true");
+            document.documentElement.style.overflow = ""; // restore
+            if (lastTrigger) {
+              try {
+                lastTrigger.focus();
+              } catch (e) {}
+            }
+          }
+
+          // Abrir con botones .info-btn
+          document.addEventListener("click", function (e) {
+            var btn = e.target.closest(".info-btn");
+            if (!btn) return;
+            var t = btn.getAttribute("data-title") || "Información";
+            var b = btn.getAttribute("data-body") || "";
+            openModal(t, b, btn);
+          });
+
+          // Cerrar con elementos que tengan data-close
+          modal.addEventListener("click", function (e) {
+            if (e.target.matches("[data-close]")) closeModal();
+          });
+
+          // Cerrar con Escape
+          document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && modal.classList.contains("is-open")) {
+              closeModal();
+            }
+          });
+        })();
       </script>
     </div>
   </body>
 
   <style is:global>
-    :root {
-      --accent: 136, 58, 234;
-      --accent-light: 224, 204, 250;
-      --accent-dark: 49, 10, 101;
-      --accent-gradient: linear-gradient(
-        45deg,
-        rgb(var(--accent)),
-        rgb(var(--accent-light)) 30%,
-        white 60%
-      );
-    }
+    /* ===== Fondo ===== */
     html {
-      font-family: system-ui, sans-serif;
       background: #fafafa;
-      color: #121212;
-      margin: 0;
-      padding: 0;
     }
 
-    h1 {
-      font-size: 4rem;
-      font-weight: 700;
-      line-height: 1;
-      text-align: center;
-      padding-bottom: 20px;
-    }
+    /* ===== Tarjeta/Contenedor ===== */
     .login-container {
-      width: 25%;
-      margin: 5px auto;
-      background-color: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-      text-align: center;
-    }
-    h2 {
-      margin-bottom: 20px;
-      color: rgb(var(--accent-dark));
-      font-size: 2rem;
-      font-weight: 700;
-      line-height: 1;
-      text-align: center;
-      color: black;
-    }
-    .input-group,
-    .checkbox-group {
-      margin-bottom: 15px;
+      width: clamp(680px, 64vw, 980px);
+      max-width: 1040px;
+      margin: 24px auto;
+      background: #fff;
+      padding: 28px;
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
       text-align: left;
-      align-items: center;
-      justify-content: center;
     }
 
-    .checkbox-group {
-      display: flex;
-      justify-content: flex-end;
-      flex-direction: row-reverse;
-    }
-
-    .input-group label,
-    .checkbox-group label {
-      display: block;
-      margin-bottom: 5px;
-      color: black;
-      font-weight: 600;
-    }
-    .input-group input,
-    .checkbox-group input {
-      width: 90%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 1rem;
-    }
-
-    .checkbox-group label {
-      display: flex;
-    }
-
-    .text-kine {
-      color: #ffbd59;
-    }
-    .text-play {
-      color: #03a1cf;
-    }
-
-    .button-container {
-      display: flex;
-      flex-direction: column; /* Alinea los botones uno encima del otro */
-      align-items: center; /* Centra los botones horizontalmente */
-      gap: 10px; /* Espacio entre los botones */
-    }
-
-    button {
-      width: 80%; /* O ajusta según lo necesario para que tengan un buen tamaño */
-      padding: 10px 20px;
-    }
-    input[type="checkbox"] {
-      /*appearance: none; /* Oculta el diseño predeterminado */
-      width: 20px;
-      height: 20px;
-      border: 2px solid #03a1cf; /* Borde con color */
-      border-radius: 4px; /* Bordes redondeados */
-      background-color: white; /* Fondo blanco */
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    input[type="checkbox"]:checked {
-      background-color: #ffbd59; /* Fondo amarillo al estar seleccionado */
-      border-color: #ffbd59;
+    /* Título */
+    .login-container > h2 {
+      margin: 0 0 14px;
+      font-weight: 800;
+      color: #0b1b2b;
+      letter-spacing: 0.2px;
       position: relative;
     }
-
-    input[type="checkbox"]:checked::after {
-      content: "✓"; /* Marca de check */
-      display: block;
-      color: white;
-      font-size: 16px;
-      text-align: center;
-      line-height: 20px;
+    .login-container > h2::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -6px;
+      width: 78px;
+      height: 8px;
+      border-radius: 8px;
+      background: linear-gradient(
+        90deg,
+        var(--kp-blue, #03a1cf),
+        var(--kp-gold, #ffbd59)
+      );
+      opacity: 0.4;
     }
 
-    /* Efecto hover */
-    input[type="checkbox"]:hover {
-      border-color: #1363df;
+    /* Inputs */
+    .input-group,
+    .checkbox-group {
+      margin-bottom: 14px;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 6px;
+      color: #000;
+      font-weight: 600;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    /* Fieldset Asignaciones */
+    .apps-fieldset {
+      position: relative;
+      border: 1px solid rgba(3, 161, 207, 0.18);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff, #f7f6f3);
+      padding: 14px 16px 18px;
+      margin: 18px 0;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+    }
+    .apps-fieldset::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border: 2px dashed rgba(255, 189, 89, 0.55);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+    .apps-fieldset legend {
+      padding: 0 8px;
+      font-weight: 800;
+      color: #0b1b2b;
+    }
+
+    /* Fila de app */
+    .app-row {
+      display: grid;
+      grid-template-columns: 1fr auto; /* nombre | controles */
+      align-items: center;
+      gap: 10px 18px;
+      padding: 6px;
+      border-radius: 10px;
+    }
+    .app-row:hover {
+      background: rgba(3, 161, 207, 0.06);
+    }
+
+    .app-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 220px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .app-check input {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--kp-blue, #03a1cf);
+      border-radius: 6px;
+      accent-color: var(--kp-gold, #ffbd59);
+    }
+
+    .app-controls {
+      display: grid;
+      grid-template-columns: auto 100px auto 160px;
+      column-gap: 60px;
+      row-gap: 8px;
+      align-items: center;
+    }
+    .app-controls .mini-label {
+      white-space: nowrap;
+    }
+    .min-input,
+    .dif-select {
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+    }
+
+    @media (min-width: 1440px) {
+      .app-controls {
+        grid-template-columns: auto 260px auto 210px;
+      }
+    }
+    @media (max-width: 1024px) {
+      .app-controls {
+        grid-template-columns: auto 200px auto 170px;
+      }
+    }
+    @media (max-width: 720px) {
+      .app-row {
+        grid-template-columns: 1fr;
+      }
+      .app-controls {
+        grid-template-columns: auto minmax(140px, 1fr);
+        column-gap: 14px;
+      }
+      .app-controls .mini-label {
+        justify-self: end;
+        padding-right: 6px;
+      }
+      .login-container {
+        width: 94vw;
+        padding-inline: 16px;
+      }
+    }
+
+    .mini-label {
+      white-space: nowrap;
+      font-size: 0.95rem;
+      color: #374151;
+      font-weight: 600;
+    }
+    .min-input,
+    .dif-select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 0.95rem;
+      background: #fff;
+      min-height: 40px;
+    }
+    .min-input:disabled,
+    .dif-select:disabled {
+      background: #f3f4f6;
+      color: #9ca3af;
+    }
+
+    /* Botones */
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .button-container .link-card {
+      width: 300px !important;
+      height: 60px !important;
+      list-style: none;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--card-color, #03a1cf);
+      overflow: hidden;
+      margin: 6px;
+      border-radius: 10px;
+      box-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.04),
+        0 10px 22px rgba(0, 0, 0, 0.06);
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        background-color 0.3s ease;
+    }
+    .button-container .link-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: none;
+      opacity: 0.85;
+      transition:
+        background 0.6s ease,
+        opacity 0.2s ease;
+    }
+    .button-container .link-card:hover {
+      transform: translateY(-1px) scale(1.01);
+      box-shadow:
+        0 10px 20px rgba(3, 161, 207, 0.12),
+        0 22px 44px rgba(0, 0, 0, 0.08);
+    }
+    .button-container .link-card:hover::before {
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.7),
+        var(--card-color, #03a1cf)
+      );
+      opacity: 0.45;
+    }
+    .button-container .link-card > .card-content,
+    .button-container .link-card > a .card-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+    }
+    .button-container .link-card .text-content h2 {
+      margin: 0;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      font-size: clamp(1.25rem, 3vw, 1.5rem);
+    }
+
+    /* ===== INFO BUTTON (icono i) ===== */
+    .info-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      margin-left: 6px;
+      border-radius: 50%;
+      border: 1.8px solid var(--kp-blue, #03a1cf);
+      color: var(--kp-blue, #03a1cf);
+      background: #fff;
+      cursor: pointer;
+      transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease,
+        background 0.2s;
+    }
+    .info-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(3, 161, 207, 0.18);
+      background: rgba(3, 161, 207, 0.04);
+    }
+    .info-btn:focus {
+      outline: 2px solid rgba(3, 161, 207, 0.35);
+      outline-offset: 2px;
+    }
+
+    /* ===== MODAL OVERLAY ===== */
+    .kp-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 9999; /* bien arriba */
+    }
+    .kp-modal.is-open {
+      display: block;
+    }
+
+    .kp-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(2px);
+    }
+
+    .kp-modal__dialog {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(560px, 92vw);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow:
+        0 18px 50px rgba(0, 0, 0, 0.22),
+        0 6px 18px rgba(3, 161, 207, 0.18);
+      padding: 18px 18px 14px;
+      border: 1px solid rgba(3, 161, 207, 0.22);
+    }
+
+    .kp-modal__title {
+      margin: 0 36px 6px 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0b1b2b;
+    }
+
+    .kp-modal__body {
+      font-size: 0.98rem;
+      color: #0b1b2b;
+      line-height: 1.45;
+    }
+
+    .kp-modal__actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .kp-modal__ok {
+      appearance: none;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: linear-gradient(
+        90deg,
+        var(--kp-blue, #03a1cf),
+        var(--kp-gold, #ffbd59)
+      );
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(3, 161, 207, 0.16);
+    }
+
+    .kp-modal__close {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      color: #1f2937;
+    }
+    .kp-modal__close:hover {
+      background: #f8fafc;
+    }
+    .kp-modal__close:focus {
+      outline: 2px solid rgba(3, 161, 207, 0.35);
+      outline-offset: 2px;
     }
   </style>
 </Layout>

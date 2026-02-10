@@ -1,92 +1,159 @@
 ---
 interface Props {
-    title: string;
-    body?: string; // Cambiado a opcional, ya que podrías no usarlo
-    onClick?: () => void; // Cambia 'onclick' a 'onClick', hazlo opcional
-    imageSrc?: string; // Cambiado a opcional
-    color: string;
+  title: string;
+  body?: string;
+  imageSrc?: string;
+  color: string;
+  type?: "button" | "submit" | "reset";
+  width?: string; // opcional
+  height?: string; // opcional
 }
-
-const { title, body, imageSrc, color, onClick } = Astro.props;
+const {
+  title,
+  body,
+  imageSrc,
+  color,
+  type = "button",
+  width = "300px",
+  height = "60px",
+} = Astro.props;
 ---
 
-<button 
-    class="link-card" 
-    style={`--card-color: ${color};`} 
-    type="submit"
+<button
+  class="kp-btn"
+  type={type}
+  style={`--card-color:${color}; --btn-w:${width}; --btn-h:${height};`}
+  aria-label={title}
 >
-    <div class="card-content">
-        {imageSrc && <img src={imageSrc} alt={title} class="card-image" />}
-        <div class="text-content">
-            <h2>{title}</h2>
-            {body && <p>{body}</p>} {/* Solo muestra si hay contenido */}
-        </div>
+  <div class="kp-btn__content">
+    {
+      imageSrc && (
+        <img src={imageSrc} alt="" class="kp-btn__icon" aria-hidden="true" />
+      )
+    }
+    <div class="kp-btn__text">
+      <h2 class="kp-btn__title">{title}</h2>
+      {body && <p class="kp-btn__body">{body}</p>}
     </div>
+  </div>
 </button>
 
 <style>
-	.link-card {
-		list-style: none;
-		position: relative;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background-color: var(--card-color, #03A1CF); /* El color base viene del prop */
-		width: 300px;
-		height: 60px;
-		overflow: hidden;
-		margin: 5px;
-		border-radius: 8px;
-		transition: background-color 0.5s ease;
-	}
+  .kp-btn {
+    --hover-scale-text: 1.06;
+    --hover-scale-icon: 1.12;
+    --radius: 8px;
 
-	.link-card::before {
-		content: "";
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background: none;
-		z-index: 0;
-		transition: background 0.9s ease;
-		opacity: 0.8;
-	}
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--btn-w, 300px);
+    height: var(--btn-h, 60px);
+    margin: 5px;
+    padding: 0; /* usamos padding interno en el content */
+    border: 0;
+    border-radius: var(--radius);
+    background-color: var(--card-color, #03a1cf);
+    color: #fff;
+    box-sizing: border-box;
+    cursor: pointer;
+    overflow: hidden;
 
-	.link-card:hover::before {
-		background: linear-gradient(90deg, white, var(--card-color)); /* Gradiente de blanco al color dinámico */
-	}
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      background-color 0.18s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  }
+  .kp-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: none;
+    opacity: 0.8;
+    transition:
+      background 0.18s ease,
+      opacity 0.18s ease;
+  }
+  .kp-btn:hover::before,
+  .kp-btn:focus-within::before {
+    background: linear-gradient(90deg, #ffffff, var(--card-color));
+    opacity: 0.35;
+  }
+  .kp-btn:hover,
+  .kp-btn:focus-within {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  }
+  .kp-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  }
 
-	.card-content {
-		display: flex;
-		align-items: center;
-	}
+  .kp-btn__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1rem;
+    width: 100%;
+    justify-content: center;
+    transition: transform 0.18s ease;
+  }
+  .kp-btn__icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    transition:
+      transform 0.18s ease,
+      filter 0.18s ease;
+    transform-origin: center;
+  }
+  .kp-btn__text {
+    display: flex;
+    flex-direction: column;
+  }
+  .kp-btn__title,
+  .kp-btn__body {
+    margin: 0;
+    color: #fff;
+    transition: transform 0.18s ease;
+    transform-origin: left center;
+  }
+  .kp-btn__body {
+    font-size: 0.95rem;
+    margin-top: 0.25rem;
+  }
 
-	.card-image {
-		width: 40px;
-		height: 40px;
-		margin-right: 1rem;
-		object-fit: contain;
-	}
+  .kp-btn:hover .kp-btn__title,
+  .kp-btn:hover .kp-btn__body,
+  .kp-btn:focus-within .kp-btn__title,
+  .kp-btn:focus-within .kp-btn__body {
+    transform: scale(var(--hover-scale-text));
+  }
+  .kp-btn:hover .kp-btn__icon,
+  .kp-btn:focus-within .kp-btn__icon {
+    transform: scale(var(--hover-scale-icon));
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+  }
 
-	.text-content {
-		display: flex;
-		flex-direction: column;
-	}
+  .kp-btn:focus-visible {
+    outline: 3px solid #ffbd59;
+    outline-offset: 3px;
+  }
 
-	h2 {
-		margin: 0;
-		color: white;
-	}
-
-	p {
-		margin: 0.5rem 0 0 0;
-		color: white;
-	}
-
-	@media (max-width: 768px) {
-		.link-card {
-			width: 100%;
-		}
-	}
+  @media (prefers-reduced-motion: reduce) {
+    .kp-btn,
+    .kp-btn::before,
+    .kp-btn__content,
+    .kp-btn__icon,
+    .kp-btn__title,
+    .kp-btn__body {
+      transition: none !important;
+    }
+  }
 </style>
